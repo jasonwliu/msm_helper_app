@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSM Crystal Piece Tracker</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface: #1e1e1e;
+            --surface-light: #2c2c2c;
+            --primary: #bb86fc;
+            --secondary: #03dac6;
+            --text: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border: #333;
+            --weapon: #ff7597;
+            --armor: #4dabf7;
+        }
+
+        /* Fixes padding/width issues globally */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+
+        nav {
+            background-color: var(--surface);
+            padding: 15px;
+            display: flex;
+            gap: 15px;
+            border-bottom: 1px solid var(--border);
+            justify-content: center;
+        }
+
+        nav button {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+
+        nav button:hover { background-color: rgba(255, 255, 255, 0.05); }
+        nav button.active { color: var(--primary); background-color: rgba(187, 134, 252, 0.1); font-weight: bold; }
+
+        .container {
+            max-width: 650px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: var(--surface);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            width: 95%; /* Ensures it doesn't touch the very edges of mobile screens */
+        }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        h1, h2, h3 { color: var(--primary); margin-top: 0; }
+        
+        .type-indicator {
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .type-weapon { background-color: rgba(255, 117, 151, 0.2); color: var(--weapon); border: 1px solid var(--weapon); }
+        .type-armor { background-color: rgba(77, 171, 247, 0.2); color: var(--armor); border: 1px solid var(--armor); }
+
+        /* --- TRACKER SPLIT LAYOUT --- */
+        .tracker-split {
+            display: flex;
+            gap: 20px;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            align-items: stretch;
+        }
+
+        .tracker-left {
+            flex: 1;
+            border-right: 1px solid var(--border);
+            padding-right: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .tracker-right {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .tracker-left h2 { font-size: 26px; color: var(--text); margin-bottom: 15px; }
+        
+        .stat-line { 
+            font-size: 18px; 
+            margin-bottom: 10px; 
+            color: var(--text-muted); 
+            transition: 0.2s; 
+            padding: 5px; 
+            border-radius: 4px; 
+            border: 1px solid transparent;
+        }
+        .stat-line strong { font-size: 22px; }
+        
+        /* Only apply clickable styling on weekends */
+        .stat-line.weekend-clickable { cursor: pointer; }
+        .stat-line.weekend-clickable:hover { background-color: rgba(255, 255, 255, 0.05); border-color: var(--border); }
+
+        .stat-weapon.active { color: var(--weapon); background-color: rgba(255, 117, 151, 0.1); font-weight: bold; border-color: rgba(255, 117, 151, 0.3); }
+        .stat-armor.active { color: var(--armor); background-color: rgba(77, 171, 247, 0.1); font-weight: bold; border-color: rgba(77, 171, 247, 0.3); }
+
+        .up-next { margin-top: 20px; font-size: 14px; color: var(--text-muted); }
+        .up-next span { color: var(--text); font-weight: bold; }
+
+        .section-label { font-weight: bold; font-size: 12px; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 10px; }
+
+        /* --- BUTTON SELECTION UI --- */
+        .btn-group { display: flex; gap: 10px; }
+        .grid-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        
+        button {
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.1s;
+            width: 100%;
+        }
+        
+        button:hover { opacity: 0.8; }
+        
+        .select-btn {
+            background-color: var(--bg-color);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .select-btn.active {
+            background-color: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
+        
+        .cluster-btn.active {
+            background-color: var(--secondary);
+            color: #000;
+            border-color: var(--secondary);
+        }
+
+        .action-btn { background-color: var(--primary); color: #000; padding: 15px; font-size: 18px; margin-bottom: 10px; }
+        .skip-btn { background-color: #555; color: white; }
+
+        input, select {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background-color: var(--surface);
+            color: var(--text);
+            font-size: 16px;
+            width: 100%;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 500px) {
+            .tracker-split { flex-direction: column; }
+            .tracker-left { border-right: none; border-bottom: 1px solid var(--border); padding-right: 0; padding-bottom: 20px; }
+            .grid-group { grid-template-columns: repeat(3, 1fr); }
+            
+            /* Stack the add character inputs on portrait phone mode */
+            .add-char-form { grid-template-columns: 1fr !important; }
+            .add-char-form input[type="text"], 
+            .add-char-form input[type="number"], 
+            .add-char-form button { 
+                grid-column: 1 !important; 
+            }
+        }
+
+        /* --- OVERVIEW & CALCULATOR STYLES --- */
+        .char-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+        .char-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+        .char-info { flex: 1; }
+        .char-info strong { font-size: 18px; display: block; margin-bottom: 8px; }
+        .stone-count { color: var(--text-muted); font-size: 14px; margin-left: 5px; }
+        
+        /* Inline Edit Inputs */
+        .edit-input {
+            width: 70px;
+            padding: 6px;
+            margin: 0 5px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background-color: var(--surface-light);
+            color: var(--text);
+            font-size: 14px;
+        }
+        
+        .edit-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .use-stone-btn {
+            background-color: #444;
+            color: var(--text);
+            padding: 4px 10px;
+            font-size: 12px;
+            width: auto;
+            margin-left: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .use-stone-btn:hover { background-color: #555; }
+
+        .add-char-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding-top: 20px;
+        }
+        .add-char-form input[type="text"] { grid-column: span 2; }
+        .add-char-form button { grid-column: span 2; background-color: var(--primary); color: black; }
+
+        .calc-result {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--surface-light);
+            border-radius: 4px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <button id="nav-tracker" class="active" onclick="switchPage('tracker')">Tracker</button>
+        <button id="nav-overview" onclick="switchPage('overview')">Overview</button>
+        <button id="nav-calculator" onclick="switchPage('calculator')">Calculator</button>
+    </nav>
+
+    <div id="page-tracker" class="page container active">
+        <h2>Daily Tracker</h2>
+        <div id="day-indicator" class="type-indicator"></div>
+        
+        <div id="tracker-content" class="tracker-split">
+            
+            <div class="tracker-left">
+                <h2 id="active-char-name">No Characters</h2>
+                
+                <div id="stat-weapon" class="stat-line stat-weapon" onclick="handleStatClick('weapon')">
+                    Weapon: <strong id="active-wpn">0</strong>
+                </div>
+                <div id="stat-armor" class="stat-line stat-armor" onclick="handleStatClick('armor')">
+                    Armor: <strong id="active-arm">0</strong>
+                </div>
+                
+                <div class="up-next">
+                    Up Next: <span id="next-char-name">...</span>
+                </div>
+            </div>
+            
+            <div class="tracker-right">
+                
+                <div>
+                    <div class="section-label">BASE DROP</div>
+                    <div class="btn-group">
+                        <button class="select-btn base-btn" onclick="setBase(3)">3</button>
+                        <button class="select-btn base-btn active" onclick="setBase(5)">5</button>
+                        <button class="select-btn base-btn" onclick="setBase(7)">7</button>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="section-label">CLUSTER (Optional)</div>
+                    <div class="grid-group">
+                        <button class="select-btn cluster-btn" onclick="setCluster(20)">20</button>
+                        <button class="select-btn cluster-btn" onclick="setCluster(30)">30</button>
+                        <button class="select-btn cluster-btn" onclick="setCluster(40)">40</button>
+                        <button class="select-btn cluster-btn" onclick="setCluster(50)">50</button>
+                        <button class="select-btn cluster-btn" onclick="setCluster(60)">60</button>
+                        <button class="select-btn cluster-btn" onclick="setCluster(70)">70</button>
+                        <button class="select-btn cluster-btn" onclick="setCluster(80)">80</button>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <button onclick="commitDrop()" class="action-btn">Add <span id="total-preview">5</span></button>
+                    <button onclick="nextCharacter()" class="skip-btn">Skip Without Adding</button>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <div id="page-overview" class="page container">
+        <h2>Character Overview</h2>
+        <ul class="char-list" id="character-list">
+            </ul>
+
+        <div class="add-char-form">
+            <input type="text" id="new-char-name" placeholder="Character Name">
+            <input type="number" id="new-char-wpn" placeholder="Initial Weapon Pieces" min="0">
+            <input type="number" id="new-char-arm" placeholder="Initial Armor Pieces" min="0">
+            <button onclick="addCharacter()">Add Character</button>
+        </div>
+
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <h3>Data Management</h3>
+            <p style="font-size: 14px; color: var(--text-muted); margin-top:0;">Backup your data or move it to another device.</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="exportData()" style="background-color: var(--secondary); color: black; flex: 1;">Export Data</button>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+                <button onclick="document.getElementById('import-file').click()" style="background-color: #cf6679; color: black; flex: 1;">Import Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-calculator" class="page container">
+        <h2>Stone Maximizer</h2>
+        <p style="color: var(--text-muted); font-size: 14px;">Enter a pool of unassigned pieces to see how to distribute them to get the maximum number of completed stones (150 pieces = 1 stone).</p>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <input type="number" id="calc-amount" placeholder="Amount of Pieces">
+            <select id="calc-type">
+                <option value="weapon">Weapon</option>
+                <option value="armor">Armor</option>
+            </select>
+        </div>
+        <button onclick="calculateDistribution()" style="width: 100%; background-color: var(--primary); color: black;">Calculate Optimal Distribution</button>
+
+        <div id="calc-result" class="calc-result" style="display: none;"></div>
+    </div>
+
+    <script>
+        // State
+        let characters = JSON.parse(localStorage.getItem('msmCharacters')) || [];
+        let activeCharIndex = 0;
+        let todayType = 'armor';
+        
+        // Selection State
+        let currentBase = 5;
+        let currentCluster = 0;
+
+        // Initialization
+        function init() {
+            determineDayType();
+            renderOverview();
+            renderTracker();
+            updateSelectionUI();
+        }
+
+        function saveData() {
+            localStorage.setItem('msmCharacters', JSON.stringify(characters));
+            renderOverview();
+            renderTracker();
+        }
+
+        // Navigation
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById('page-' + pageId).classList.add('active');
+            document.getElementById('nav-' + pageId).classList.add('active');
+        }
+
+        // Determine Weapon (Tue/Thu) vs Armor and setup weekend clicks
+        function determineDayType() {
+            const day = new Date().getDay(); // 0 = Sunday, 6 = Saturday
+            const statWeapon = document.getElementById('stat-weapon');
+            const statArmor = document.getElementById('stat-armor');
+            
+            // Enable clickable styling only for weekends
+            if (day === 0 || day === 6) {
+                statWeapon.classList.add('weekend-clickable');
+                statArmor.classList.add('weekend-clickable');
+                statWeapon.title = "Click to track Weapon pieces (Weekend Override)";
+                statArmor.title = "Click to track Armor pieces (Weekend Override)";
+            } else {
+                statWeapon.classList.remove('weekend-clickable');
+                statArmor.classList.remove('weekend-clickable');
+                statWeapon.removeAttribute('title');
+                statArmor.removeAttribute('title');
+            }
+
+            if (day === 2 || day === 4) {
+                setTrackedType('weapon', true);
+            } else {
+                // Default to armor on all other days including weekends
+                setTrackedType('armor', true);
+            }
+        }
+
+        // Only allow manual override clicks on weekends
+        function handleStatClick(type) {
+            const day = new Date().getDay();
+            if (day === 0 || day === 6) {
+                setTrackedType(type, false);
+            }
+        }
+
+        // Set tracked type and update UI
+        function setTrackedType(type, isAuto = false) {
+            todayType = type;
+            const indicator = document.getElementById('day-indicator');
+            const statWeapon = document.getElementById('stat-weapon');
+            const statArmor = document.getElementById('stat-armor');
+            
+            statWeapon.classList.remove('active');
+            statArmor.classList.remove('active');
+
+            if (type === 'weapon') {
+                indicator.textContent = isAuto ? "Today is Tuesday/Thursday: Tracking WEAPON Pieces" : "Weekend Override: Tracking WEAPON Pieces";
+                indicator.className = "type-indicator type-weapon";
+                statWeapon.classList.add('active');
+            } else {
+                indicator.textContent = isAuto ? "Today: Tracking ARMOR Pieces" : "Weekend Override: Tracking ARMOR Pieces";
+                indicator.className = "type-indicator type-armor";
+                statArmor.classList.add('active');
+            }
+        }
+
+        // Tracker Logic & Selection UI
+        function setBase(val) {
+            currentBase = val;
+            updateSelectionUI();
+        }
+
+        function setCluster(val) {
+            if (currentCluster === val) {
+                currentCluster = 0;
+            } else {
+                currentCluster = val;
+            }
+            updateSelectionUI();
+        }
+
+        function updateSelectionUI() {
+            document.querySelectorAll('.base-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.innerText) === currentBase);
+            });
+            
+            document.querySelectorAll('.cluster-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.innerText) === currentCluster);
+            });
+
+            const total = currentBase + currentCluster;
+            document.getElementById('total-preview').textContent = total;
+        }
+
+        function renderTracker() {
+            if (characters.length === 0) {
+                document.getElementById('active-char-name').textContent = "No Characters";
+                document.getElementById('active-wpn').textContent = "0";
+                document.getElementById('active-arm').textContent = "0";
+                document.getElementById('next-char-name').textContent = "None";
+                return;
+            }
+
+            if (activeCharIndex >= characters.length) activeCharIndex = 0;
+
+            const char = characters[activeCharIndex];
+            document.getElementById('active-char-name').textContent = char.name;
+            document.getElementById('active-wpn').textContent = char.weapon;
+            document.getElementById('active-arm').textContent = char.armor;
+            
+            const nextIndex = (activeCharIndex + 1) % characters.length;
+            document.getElementById('next-char-name').textContent = characters[nextIndex].name;
+        }
+
+        function commitDrop() {
+            if (characters.length === 0) return alert("Please add characters in the Overview tab first.");
+            
+            const total = currentBase + currentCluster;
+            characters[activeCharIndex][todayType] += total;
+            
+            currentCluster = 0;
+            updateSelectionUI();
+            
+            nextCharacter();
+        }
+
+        function nextCharacter() {
+            if (characters.length === 0) return;
+            activeCharIndex = (activeCharIndex + 1) % characters.length;
+            
+            // Snap back to auto-detected default for the real-world day
+            determineDayType();
+            saveData();
+        }
+
+        // Overview Logic
+        function addCharacter() {
+            const name = document.getElementById('new-char-name').value.trim();
+            const wpn = parseInt(document.getElementById('new-char-wpn').value) || 0;
+            const arm = parseInt(document.getElementById('new-char-arm').value) || 0;
+
+            if (!name) return alert("Please enter a character name.");
+
+            characters.push({ name: name, weapon: wpn, armor: arm });
+            
+            document.getElementById('new-char-name').value = '';
+            document.getElementById('new-char-wpn').value = '';
+            document.getElementById('new-char-arm').value = '';
+            
+            saveData();
+        }
+
+        function deleteCharacter(index) {
+            if(confirm(`Remove ${characters[index].name}?`)) {
+                characters.splice(index, 1);
+                activeCharIndex = 0; 
+                saveData();
+            }
+        }
+        
+        function updateCharacterStat(index, type, value) {
+            let parsed = parseInt(value);
+            if (isNaN(parsed) || parsed < 0) parsed = 0;
+            characters[index][type] = parsed;
+            saveData();
+        }
+
+        function useStone(index, type) {
+            if (characters[index][type] >= 150) {
+                characters[index][type] -= 150;
+                saveData();
+            }
+        }
+
+        function renderOverview() {
+            const list = document.getElementById('character-list');
+            list.innerHTML = '';
+
+            characters.forEach((char, index) => {
+                const wStones = Math.floor(char.weapon / 150);
+                const wRem = char.weapon % 150;
+                const aStones = Math.floor(char.armor / 150);
+                const aRem = char.armor % 150;
+
+                const li = document.createElement('li');
+                li.className = 'char-item';
+                li.innerHTML = `
+                    <div class="char-info">
+                        <strong>${char.name}</strong>
+                        
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap;">
+                            <span style="color: var(--weapon); min-width: 65px;">Weapon:</span>
+                            <input type="number" class="edit-input" value="${char.weapon}" min="0" onchange="updateCharacterStat(${index}, 'weapon', this.value)">
+                            <span class="stone-count">(${wStones} Stones, ${wRem}/150)</span>
+                            ${wStones > 0 ? `<button class="use-stone-btn" onclick="useStone(${index}, 'weapon')">-1 Stone</button>` : ''}
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                            <span style="color: var(--armor); min-width: 65px;">Armor:</span>
+                            <input type="number" class="edit-input" value="${char.armor}" min="0" onchange="updateCharacterStat(${index}, 'armor', this.value)">
+                            <span class="stone-count">(${aStones} Stones, ${aRem}/150)</span>
+                            ${aStones > 0 ? `<button class="use-stone-btn" onclick="useStone(${index}, 'armor')">-1 Stone</button>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="deleteCharacter(${index})" style="background: #cf6679; padding: 10px; color: black; border-radius: 4px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin-left: 10px;">X</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        // --- Data Management (Import / Export) ---
+        function exportData() {
+            if (characters.length === 0) return alert("No data to export!");
+            const dataStr = JSON.stringify(characters, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            const date = new Date().toISOString().split('T')[0];
+            a.download = `msm-tracker-backup-${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        if (importedData.length > 0 && typeof importedData[0].name === "undefined") {
+                            throw new Error("Missing character name property.");
+                        }
+                        characters = importedData;
+                        activeCharIndex = 0;
+                        saveData();
+                        alert("Data imported successfully!");
+                    } else {
+                        alert("Invalid file format. Expected a JSON array.");
+                    }
+                } catch (error) {
+                    alert("Error reading file: " + error.message);
+                }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+
+        // Calculator Logic
+        function calculateDistribution() {
+            if (characters.length === 0) return alert("No characters available.");
+            
+            const totalToDistribute = parseInt(document.getElementById('calc-amount').value);
+            if (!totalToDistribute || totalToDistribute <= 0) return;
+
+            const type = document.getElementById('calc-type').value; 
+            
+            let pool = characters.map(c => {
+                let current = c[type];
+                let remainder = current % 150;
+                let needed = remainder === 0 ? 150 : 150 - remainder;
+                return { name: c.name, current: current, needed: needed, given: 0 };
+            });
+
+            pool.sort((a, b) => a.needed - b.needed);
+
+            let remaining = totalToDistribute;
+            let stonesCreated = 0;
+
+            for (let p of pool) {
+                if (remaining >= p.needed) {
+                    p.given += p.needed;
+                    remaining -= p.needed;
+                    p.current += p.needed;
+                    stonesCreated++;
+                }
+            }
+
+            pool.sort((a, b) => b.current - a.current); 
+            while (remaining >= 150) {
+                pool[0].given += 150;
+                pool[0].current += 150;
+                remaining -= 150;
+                stonesCreated++;
+            }
+
+            if (remaining > 0) {
+                pool[0].given += remaining;
+                pool[0].current += remaining;
+                remaining = 0;
+            }
+
+            const resultBox = document.getElementById('calc-result');
+            resultBox.style.display = 'block';
+            let output = `Optimal Distribution Results:\n`;
+            output += `Total Stones Created: ${stonesCreated}\n`;
+            output += `------------------------------------\n`;
+
+            let actuallyGiven = pool.filter(p => p.given > 0);
+            if (actuallyGiven.length === 0) {
+                output += "Not enough pieces to do anything meaningful.";
+            } else {
+                actuallyGiven.forEach(p => {
+                    const original = p.current - p.given;
+                    const oldStones = Math.floor(original / 150);
+                    const newStones = Math.floor(p.current / 150);
+                    const stoneDiff = newStones - oldStones;
+                    const stoneText = stoneDiff > 0 ? ` (+${stoneDiff} Stone${stoneDiff > 1 ? 's' : ''}!)` : '';
+                    
+                    output += `Give ${p.given} pieces to ${p.name}\n`;
+                    output += `  ↳ Result: ${original} ➔ ${p.current} pieces${stoneText}\n\n`;
+                });
+            }
+
+            resultBox.textContent = output;
+        }
+
+        // Run on load
+        window.onload = init;
+    </script>
+</body>
+</html>

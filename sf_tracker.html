@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MSM Star Force Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #ffffff;
+            --up-color: #4caf50;
+            --maintain-color: #9e9e9e;
+            --derank-color: #ff9800;
+            --break-color: #f44336;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        h1, h2, h3 { margin-top: 0; text-align: center; }
+
+        .card {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .card-header h2 { margin: 0; font-size: 1.2rem; }
+
+        .sf-setup {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.2rem;
+        }
+
+        .sf-setup input {
+            font-size: 1.5rem;
+            width: 80px;
+            text-align: center;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 5px;
+        }
+
+        .current-sf-display {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #ffd700; /* Gold */
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            touch-action: manipulation; /* Prevents double-tap zoom on mobile */
+        }
+
+        button:active { opacity: 0.8; transform: scale(0.98); }
+
+        .btn-up { background-color: var(--up-color); }
+        .btn-maintain { background-color: var(--maintain-color); color: #000; }
+        .btn-derank { background-color: var(--derank-color); }
+        .btn-break { background-color: var(--break-color); }
+
+        .star-catch-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            background: #444;
+            margin-left: 5px;
+            font-weight: normal;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        /* Grid layout for PC */
+        @media (min-width: 768px) {
+            .charts-container {
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            }
+        }
+
+        .chart-wrapper {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 8px;
+            height: 280px; /* Constrains height on PC */
+        }
+        .chart-wrapper h3 { font-size: 0.9rem; text-align: left; color: #ffd700; margin-bottom: 10px; }
+
+        .history-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #111;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .history-item { border-bottom: 1px solid #333; padding: 5px 0; }
+        .history-item:last-child { border-bottom: none; }
+        
+        /* Badges for history */
+        .badge { padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+        .badge-up { background-color: var(--up-color); }
+        .badge-maintain { background-color: var(--maintain-color); color: #000; }
+        .badge-derank { background-color: var(--derank-color); }
+        .badge-break { background-color: var(--break-color); }
+
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>SF Tracker</h1>
+        <div class="sf-setup">
+            <label for="startSf">Starting SF:</label>
+            <input type="number" id="startSf" value="10" min="0" max="30">
+            <button onclick="setInitialSF()" style="padding: 10px; font-size: 1rem; background: #2196f3;">Set</button>
+        </div>
+        <div class="current-sf-display">
+            ★ <span id="currentSfDisplay">10</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Outcomes</h2>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label class="star-catch-toggle">
+                    <input type="checkbox" id="starCatch" onchange="renderCharts()"> 💫 Star Catch (+5%)
+                </label>
+                <button class="btn-small" style="background: #f44336;" onclick="undoLastAction()">Undo Last</button>
+            </div>
+        </div>
+        <div class="button-grid">
+            <button class="btn-up" onclick="recordOutcome('up')">Star Up</button>
+            <button class="btn-maintain" onclick="recordOutcome('maintain')">Maintain</button>
+            <button class="btn-derank" onclick="recordOutcome('derank')">Derank</button>
+            <button class="btn-break" onclick="recordOutcome('break')">Break</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Success Rate vs Advertised</h2>
+            <div>
+                <button class="btn-small" onclick="toggleCharts()">Hide/Show</button>
+                <button class="btn-small" style="background: #2e7d32;" onclick="exportData()">Export CSV</button>
+                <button class="btn-small" style="background: #673ab7;" onclick="exportCharts()">Export Image</button>
+            </div>
+        </div>
+        <div id="chartsContainer" class="charts-container">
+            <!-- Charts dynamically injected here -->
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Sequence History</h2>
+            <div style="font-size: 0.8rem; color: #aaa;">
+                Show last: <input type="number" id="historyLimit" value="5" min="1" max="100" style="width: 40px; background: #333; color: white; border: 1px solid #555; border-radius: 4px;" onchange="updateHistoryLimit()">
+            </div>
+        </div>
+        <div class="history-log" id="historyLog">
+            </div>
+    </div>
+
+    <script>
+        // --- ADVERTISED RATES CONFIGURATION ---
+        // You can update these to the exact Maplestory M rates for your specific gear tier.
+        // Format: SF Level -> { up: %, maintain: %, derank: %, break: % }
+        const advertisedRates = {
+            9:  { up: 55, maintain: 45, derank: 0, break: 0 },
+            10: { up: 50, maintain: 40, derank: 10, break: 0 },
+            11: { up: 45, maintain: 45, derank: 10, break: 0 },
+            12: { up: 40, maintain: 40, derank: 15, break: 5 },
+            13: { up: 35, maintain: 45, derank: 15, break: 5 },
+            14: { up: 30, maintain: 45, derank: 20, break: 5 },
+            15: { up: 25, maintain: 50, derank: 20, break: 5 },
+            16: { up: 20, maintain: 50, derank: 25, break: 5 },
+            17: { up: 15, maintain: 55, derank: 25, break: 5 },
+            18: { up: 10, maintain: 55, derank: 30, break: 5 }
+        };
+
+        // --- APP STATE ---
+        let currentSf = 10;
+        let stats = {}; // Tracks outcomes per SF level
+        let history = []; // Tracks sequence
+        let historyLimit = 5;
+
+        // --- CORE FUNCTIONS ---
+        function setInitialSF() {
+            const inputVal = parseInt(document.getElementById('startSf').value);
+            if (!isNaN(inputVal) && inputVal >= 0) {
+                currentSf = inputVal;
+                updateUIDisplay();
+                saveToLocalStorage();
+            }
+        }
+
+        function updateHistoryLimit() {
+            historyLimit = parseInt(document.getElementById('historyLimit').value) || 5;
+            renderHistory();
+        }
+
+        function recordOutcome(outcome) {
+            const isCatch = document.getElementById('starCatch').checked;
+            const mode = isCatch ? 'catch' : 'normal';
+
+            // 1. Initialize stats for this SF level if it doesn't exist yet
+            if (!stats[currentSf]) {
+                stats[currentSf] = { 
+                    normal: { up: 0, maintain: 0, derank: 0, break: 0, total: 0 },
+                    catch: { up: 0, maintain: 0, derank: 0, break: 0, total: 0 }
+                };
+            }
+
+            // 2. Record the stat
+            const attemptedSf = currentSf;
+            stats[attemptedSf][mode][outcome]++;
+            stats[attemptedSf][mode].total++;
+
+            // 3. Log to history
+            const timestamp = new Date().toLocaleTimeString();
+            history.unshift({
+                time: timestamp,
+                from: attemptedSf,
+                outcome: outcome,
+                isCatch: isCatch
+            });
+
+            // 4. Update Current SF based on outcome
+            if (outcome === 'up') {
+                currentSf++;
+            } else if (outcome === 'derank') {
+                currentSf = Math.max(0, currentSf - 1);
+            }
+            // If 'maintain' or 'break', currentSF stays the same (assuming you transfer broken trace)
+
+            // 5. Update UI & Data
+            updateUIDisplay();
+            renderCharts();
+            renderHistory();
+            saveToLocalStorage();
+        }
+
+        function updateUIDisplay() {
+            document.getElementById('currentSfDisplay').innerText = currentSf;
+            document.getElementById('startSf').value = currentSf;
+        }
+
+        function renderHistory() {
+            const logContainer = document.getElementById('historyLog');
+            logContainer.innerHTML = '';
+            
+            history.slice(0, historyLimit).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                
+                let outcomeLabel = item.outcome.charAt(0).toUpperCase() + item.outcome.slice(1);
+                let badgeClass = `badge-${item.outcome}`;
+                let catchIcon = item.isCatch ? '💫 ' : '';
+                
+                div.innerHTML = `
+                    <span style="color:#888">[${item.time}]</span> 
+                    SF ${item.from} &rarr; <span class="badge ${badgeClass}">${catchIcon}${outcomeLabel}</span>
+                `;
+                logContainer.appendChild(div);
+            });
+        }
+
+        function renderCharts() {
+            const container = document.getElementById('chartsContainer');
+            container.innerHTML = '';
+
+            const isCatch = document.getElementById('starCatch').checked;
+            const mode = isCatch ? 'catch' : 'normal';
+
+            // --- 1. Render Break Summary Chart (grouped by break rate) ---
+            const uniqueBreakRates = [...new Set(Object.values(advertisedRates).map(r => r.break).filter(b => b > 0))].sort((a, b) => a - b);
+
+            const breakSummaryData = uniqueBreakRates.map(rate => {
+                const levelsWithRate = Object.keys(advertisedRates).filter(sf => advertisedRates[sf].break === rate).map(Number);
+                let totalAttempts = 0;
+                let totalBreaks = 0;
+
+                levelsWithRate.forEach(sf => {
+                    if (stats[sf] && stats[sf][mode]) {
+                        totalAttempts += stats[sf][mode].total;
+                        totalBreaks += stats[sf][mode].break;
+                    }
+                });
+
+                return { rate, totalAttempts, totalBreaks };
+            }).filter(d => d.totalAttempts > 0);
+
+            if (breakSummaryData.length > 0) {
+                const summaryWrapper = document.createElement('div');
+                summaryWrapper.className = 'chart-wrapper';
+                summaryWrapper.style.gridColumn = "1 / -1"; // Spans full width on PC
+                summaryWrapper.style.height = "300px";
+                summaryWrapper.innerHTML = `<h3>Break Rate Summary (${mode.toUpperCase()})</h3><canvas id="breakSummaryChart"></canvas>`;
+                container.appendChild(summaryWrapper);
+
+                const labels = breakSummaryData.map(d => `${d.rate}% Adv. Rate`);
+                const advBreaks = breakSummaryData.map(d => d.rate);
+                const obsBreaks = breakSummaryData.map(d => (d.totalBreaks / d.totalAttempts * 100).toFixed(1));
+
+                new Chart(document.getElementById('breakSummaryChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Adv Break %',
+                                data: advBreaks,
+                                backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                                borderColor: 'var(--break-color)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Observed Break %',
+                                data: obsBreaks,
+                                backgroundColor: 'var(--break-color)',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, max: 20, ticks: { color: '#888' }, grid: { color: '#333' } },
+                            x: { ticks: { color: '#ccc' } }
+                        },
+                        plugins: { legend: { labels: { color: '#fff' } } }
+                    }
+                });
+            }
+
+            // --- 2. Render Individual SF Charts (Excluding Break) ---
+            // Get all SF levels we have stats for, sort them numerically
+            const activeSfs = Object.keys(stats)
+                .map(Number)
+                .filter(sf => stats[sf][mode].total > 0)
+                .sort((a, b) => a - b);
+            
+            activeSfs.forEach(sf => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'chart-wrapper';
+                const totalAtt = stats[sf][mode].total;
+                wrapper.innerHTML = `<h3>SF ${sf} (${mode.toUpperCase()} - Attempts: ${totalAtt})</h3><canvas id="chart-${sf}"></canvas>`;
+                container.appendChild(wrapper);
+
+                const s = stats[sf];
+                const adv = advertisedRates[sf] || { up: 0, maintain: 0, derank: 0, break: 0 };
+                
+                // Adjust Advertised Rates for Star Catch (+5% Success, -5% Maintain)
+                const adjAdvUp = isCatch ? Math.min(100, adv.up + 5) : adv.up;
+                const adjAdvMaint = isCatch ? Math.max(0, adv.maintain - 5) : adv.maintain;
+                
+                const getRate = (mode, type) => {
+                    const data = s[mode];
+                    return data.total > 0 ? (data[type] / data.total * 100).toFixed(1) : 0;
+                };
+
+                new Chart(document.getElementById(`chart-${sf}`), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Up', 'Maint', 'Derank'],
+                        datasets: [
+                            {
+                                label: isCatch ? 'Adv % (+5% Boost)' : 'Adv %',
+                                data: [adjAdvUp, adjAdvMaint, adv.derank],
+                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                borderColor: 'rgba(255, 255, 255, 0.3)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Observed %',
+                                data: [getRate(mode, 'up'), getRate(mode, 'maintain'), getRate(mode, 'derank')],
+                                backgroundColor: isCatch ? '#ffd700' : '#2196f3',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, max: 100, ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#333' } },
+                            x: { ticks: { color: '#ccc' }, grid: { display: false } }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: '#fff', boxWidth: 12, font: { size: 11 } } }
+                        }
+                    }
+                });
+            });
+        }
+
+        function undoLastAction() {
+            if (history.length === 0) return;
+            
+            // Remove the most recent item from the history array
+            const lastAction = history.shift();
+            const sf = lastAction.from;
+            const outcome = lastAction.outcome;
+            const mode = lastAction.isCatch ? 'catch' : 'normal';
+
+            // Decrement the stats for that specific SF level
+            if (stats[sf]) {
+                stats[sf][mode][outcome]--;
+                stats[sf][mode].total--;
+                // If no attempts are left for this level, clean up the object
+                if (stats[sf].normal.total === 0 && stats[sf].catch.total === 0) {
+                    delete stats[sf];
+                }
+            }
+
+            // Revert current SF to the starting point of that action
+            currentSf = sf;
+
+            updateUIDisplay();
+            renderCharts();
+            renderHistory();
+            saveToLocalStorage();
+        }
+
+        function exportData() {
+            if (history.length === 0) {
+                alert("No data to export yet.");
+                return;
+            }
+
+            // Build Summary Stats Section
+            let csv = "--- SUMMARY STATS ---\nSF Level,Mode,Total,Up,Up %,Maintain,Maintain %,Derank,Derank %,Break,Break %\n";
+            const activeSfs = Object.keys(stats).map(Number).sort((a, b) => a - b);
+            activeSfs.forEach(sf => {
+                ['normal', 'catch'].forEach(mode => {
+                    const s = stats[sf][mode];
+                    if (s.total === 0) return;
+                    const getRate = (val) => s.total > 0 ? (val / s.total * 100).toFixed(1) : 0;
+                    csv += `${sf},${mode},${s.total},${s.up},${getRate(s.up)}%,${s.maintain},${getRate(s.maintain)}%,${s.derank},${getRate(s.derank)}%,${s.break},${getRate(s.break)}%\n`;
+                });
+            });
+
+            // Build Sequence History Section
+            csv += "\n--- SEQUENCE HISTORY ---\nTimestamp,From SF,Outcome,Star Catch\n";
+            history.forEach(item => {
+                csv += `${item.time},${item.from},${item.outcome},${item.isCatch}\n`;
+            });
+
+            // Trigger Download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `msm_sf_tracker_data_${new Date().getTime()}.csv`;
+            link.click();
+        }
+
+        function toggleCharts() {
+            const container = document.getElementById('chartsContainer');
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'grid' : 'none';
+        }
+
+        async function exportCharts() {
+            const container = document.getElementById('chartsContainer');
+            if (container.children.length === 0) {
+                alert("No stats to export yet.");
+                return;
+            }
+
+            const wasHidden = container.style.display === 'none';
+            if (wasHidden) container.style.display = 'grid';
+
+            try {
+                const canvas = await html2canvas(container, {
+                    backgroundColor: '#1e1e1e',
+                    logging: false,
+                    scale: 2
+                });
+                const link = document.createElement('a');
+                link.download = `sf_tracker_export_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            } catch (err) {
+                console.error("Export failed:", err);
+            } finally {
+                if (wasHidden) container.style.display = 'none';
+            }
+        }
+
+        function saveToLocalStorage() {
+            const state = {
+                currentSf,
+                stats,
+                history
+            };
+            localStorage.setItem('msm_sf_tracker_data', JSON.stringify(state));
+        }
+
+        function loadFromLocalStorage() {
+            const savedData = localStorage.getItem('msm_sf_tracker_data');
+            if (savedData) {
+                const state = JSON.parse(savedData);
+                currentSf = state.currentSf || 10;
+                stats = state.stats || {};
+                
+                // Data Migration: Convert old flat stats to new normal/catch structure
+                Object.keys(stats).forEach(sf => {
+                    if (stats[sf].up !== undefined && stats[sf].normal === undefined) {
+                        const oldData = stats[sf];
+                        stats[sf] = {
+                            normal: { up: 0, maintain: 0, derank: 0, break: 0, total: 0 },
+                            catch: { ...oldData }
+                        };
+                    }
+                });
+
+                history = state.history || [];
+                
+                // Migration: Default history items to isCatch: true
+                history.forEach(item => {
+                    if (item.isCatch === undefined) item.isCatch = true;
+                });
+            }
+        }
+
+        // Initialize display on load
+        loadFromLocalStorage();
+        updateUIDisplay();
+        renderCharts();
+        renderHistory();
+    </script>
+</body>
+</html>
