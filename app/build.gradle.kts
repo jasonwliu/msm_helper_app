@@ -15,34 +15,10 @@ android {
         versionName = "1.0"
     }
 
-    signingConfigs {
-        create("release") {
-            val keystoreFileVar = System.getenv("SIGNING_KEYSTORE_FILE")
-            val keystorePasswordVar = System.getenv("SIGNING_KEYSTORE_PASSWORD")
-            val keyAliasVar = System.getenv("SIGNING_KEY_ALIAS")
-            val keyPasswordVar = System.getenv("SIGNING_KEY_PASSWORD")
-
-            if (!keystoreFileVar.isNullOrEmpty() &&
-                !keystorePasswordVar.isNullOrEmpty() &&
-                !keyAliasVar.isNullOrEmpty() &&
-                !keyPasswordVar.isNullOrEmpty()) {
-                storeFile = file(keystoreFileVar)
-                storePassword = keystorePasswordVar
-                keyAlias = keyAliasVar
-                keyPassword = keyPasswordVar
-            }
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            
-            val keystoreFileVar = System.getenv("SIGNING_KEYSTORE_FILE")
-            if (!keystoreFileVar.isNullOrEmpty()) {
-                signingConfig = signingConfigs.getByName("release")
-            }
         }
     }
     compileOptions {
