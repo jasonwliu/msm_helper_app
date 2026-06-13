@@ -2,6 +2,7 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  id("maven-publish")
 }
 
 android {
@@ -99,4 +100,29 @@ dependencies {
   implementation("com.google.http-client:google-http-client-gson:1.43.3") {
       exclude(group = "org.apache.httpcomponents", module = "httpclient")
   }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("gpr") {
+            groupId = "com.example.msmhelper"
+            artifactId = "msmhelper"
+            version = "1.0.0"
+
+            artifact(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk")) {
+                classifier = "debug"
+                extension = "apk"
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/${System.getenv("GITHUB_REPOSITORY")}")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
 }
