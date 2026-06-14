@@ -487,4 +487,12 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     fun calculateOptimalDistribution(totalPool: Int, type: String): StoneOptimizer.CalculatorResult? {
         return StoneOptimizer.calculateOptimalDistribution(_characters.value, totalPool, type)
     }
+
+    fun calculateJointOptimalDistribution(
+        weaponPool: Int,
+        armorPool: Int,
+        sharedPool: Int
+    ): StoneOptimizer.JointCalculatorResult? {
+        return StoneOptimizer.calculateJointOptimalDistribution(_characters.value, weaponPool, armorPool, sharedPool)
+    }
 }

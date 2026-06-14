@@ -96,4 +96,114 @@ class StoneOptimizerTest {
         val totalAllocated = rowA.givenPieces + rowB.givenPieces
         assertEquals(160, totalAllocated)
     }
+
+    @Test
+    fun calculateJoint_withEmptyCharacters_returnsNull() {
+        val result = StoneOptimizer.calculateJointOptimalDistribution(
+            characters = emptyList(),
+            weaponPool = 100,
+            armorPool = 100,
+            sharedPool = 100
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun calculateJoint_withZeroPools_returnsNull() {
+        val chars = listOf(Character("Test", 100, 100))
+        val result = StoneOptimizer.calculateJointOptimalDistribution(
+            characters = chars,
+            weaponPool = 0,
+            armorPool = 0,
+            sharedPool = 0
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun calculateJoint_distributesSharedPoolCorrectly() {
+        val charA = Character("A", weapon = 130, armor = 140) // Weapon needs 20, Armor needs 10
+        val characters = listOf(charA)
+
+        // Weapon Pool = 10, Armor Pool = 0, Shared Pool = 20
+        // We can get both stones:
+        // - Weapon: uses 10 from weapon pool, 10 from shared
+        // - Armor: uses 0 from armor pool, 10 from shared
+        // Total shared used = 20 <= 20 (valid)
+        val result = StoneOptimizer.calculateJointOptimalDistribution(
+            characters = characters,
+            weaponPool = 10,
+            armorPool = 0,
+            sharedPool = 20
+        )
+        assertNotNull(result)
+        assertEquals(2, result!!.totalStonesCreated)
+        assertEquals(1, result.weaponStonesCreated)
+        assertEquals(1, result.armorStonesCreated)
+        assertEquals(10, result.sharedUsedForWeapon)
+        assertEquals(10, result.sharedUsedForArmor)
+
+        val weaponRow = result.weaponDistributions.find { it.charName == "A" }
+        val armorRow = result.armorDistributions.find { it.charName == "A" }
+        assertNotNull(weaponRow)
+        assertNotNull(armorRow)
+        assertEquals(20, weaponRow!!.givenPieces)
+        assertEquals(10, armorRow!!.givenPieces)
+    }
+
+    @Test
+    fun calculateJoint_minimizesLeftoversAsTieBreaker() {
+        val charA = Character("A", weapon = 130, armor = 0) // Weapon needs 20
+        val charB = Character("B", weapon = 140, armor = 0) // Weapon needs 10
+        val characters = listOf(charA, charB)
+
+        // Weapon Pool = 20, Armor Pool = 0, Shared Pool = 0
+        // We can make at most 1 stone.
+        // Option 1: Give 20 to A (uses 20 pieces)
+        // Option 2: Give 10 to B (uses 10 pieces)
+        // It should choose Option 2 to minimize pieces used.
+        val result = StoneOptimizer.calculateJointOptimalDistribution(
+            characters = characters,
+            weaponPool = 20,
+            armorPool = 0,
+            sharedPool = 0
+        )
+        assertNotNull(result)
+        assertEquals(1, result!!.totalStonesCreated)
+        assertEquals(1, result.weaponStonesCreated)
+        assertEquals(0, result.armorStonesCreated)
+
+        val rowA = result.weaponDistributions.find { it.charName == "A" }
+        val rowB = result.weaponDistributions.find { it.charName == "B" }
+        assertNull(rowA)
+        assertNotNull(rowB)
+        assertEquals(10, rowB!!.givenPieces)
+    }
+
+    @Test
+    fun calculateJoint_noSharedPool_behavesIndependently() {
+        val charA = Character("A", weapon = 130, armor = 140) // Weapon needs 20, Armor needs 10
+        val characters = listOf(charA)
+
+        // Weapon Pool = 20, Armor Pool = 5, Shared Pool = 0
+        // Weapon should get 20 (1 stone). Armor gets 0 (no stone possible with only 5 pieces).
+        val result = StoneOptimizer.calculateJointOptimalDistribution(
+            characters = characters,
+            weaponPool = 20,
+            armorPool = 5,
+            sharedPool = 0
+        )
+        assertNotNull(result)
+        assertEquals(1, result!!.totalStonesCreated)
+        assertEquals(1, result.weaponStonesCreated)
+        assertEquals(0, result.armorStonesCreated)
+        assertEquals(0, result.sharedUsedForWeapon)
+        assertEquals(0, result.sharedUsedForArmor)
+
+        val weaponRow = result.weaponDistributions.find { it.charName == "A" }
+        val armorRow = result.armorDistributions.find { it.charName == "A" }
+        assertNotNull(weaponRow)
+        assertNull(armorRow)
+        assertEquals(20, weaponRow!!.givenPieces)
+    }
 }

@@ -1410,9 +1410,9 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
 
     var weaponPiecesInput by remember { mutableStateOf("") }
     var armorPiecesInput by remember { mutableStateOf("") }
+    var sharedPiecesInput by remember { mutableStateOf("") }
 
-    var weaponCalcResult by remember { mutableStateOf<com.gcirl.msmhelper.data.StoneOptimizer.CalculatorResult?>(null) }
-    var armorCalcResult by remember { mutableStateOf<com.gcirl.msmhelper.data.StoneOptimizer.CalculatorResult?>(null) }
+    var jointCalcResult by remember { mutableStateOf<com.gcirl.msmhelper.data.StoneOptimizer.JointCalculatorResult?>(null) }
 
     if (characters.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1448,20 +1448,20 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                         color = PrimaryPurple
                     )
                     Text(
-                        text = "Enter a pool of unassigned pieces for Weapon and/or Armor to see the exact optimal way to distribute them to get the maximum number of completed stones (150 pieces = 1 stone).",
+                        text = "Enter unassigned pieces for Weapon, Armor, and/or Shared (Choice) pools to calculate the mathematically optimal distribution to get the maximum number of completed stones (150 pieces = 1 stone).",
                         fontSize = 12.sp,
                         color = TextMuted
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
                             value = weaponPiecesInput,
                             onValueChange = { weaponPiecesInput = it },
-                            label = { Text("Weapon Pool") },
+                            label = { Text("Weapon Pool", fontSize = 11.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = WeaponPink,
@@ -1474,12 +1474,25 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                         OutlinedTextField(
                             value = armorPiecesInput,
                             onValueChange = { armorPiecesInput = it },
-                            label = { Text("Armor Pool") },
+                            label = { Text("Armor Pool", fontSize = 11.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = ArmorBlue,
                                 focusedLabelColor = ArmorBlue,
                                 cursorColor = ArmorBlue
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        OutlinedTextField(
+                            value = sharedPiecesInput,
+                            onValueChange = { sharedPiecesInput = it },
+                            label = { Text("Shared Pool", fontSize = 11.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = PrimaryPurple,
+                                focusedLabelColor = PrimaryPurple,
+                                cursorColor = PrimaryPurple
                             ),
                             modifier = Modifier.weight(1f)
                         )
@@ -1489,8 +1502,8 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                         onClick = {
                             val wPool = weaponPiecesInput.toIntOrNull() ?: 0
                             val aPool = armorPiecesInput.toIntOrNull() ?: 0
-                            weaponCalcResult = if (wPool > 0) viewModel.calculateOptimalDistribution(wPool, "weapon") else null
-                            armorCalcResult = if (aPool > 0) viewModel.calculateOptimalDistribution(aPool, "armor") else null
+                            val sPool = sharedPiecesInput.toIntOrNull() ?: 0
+                            jointCalcResult = viewModel.calculateJointOptimalDistribution(wPool, aPool, sPool)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = Color.Black),
                         modifier = Modifier.fillMaxWidth(),
@@ -1503,14 +1516,68 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
         }
 
         // Show Results
-        if (weaponCalcResult != null || armorCalcResult != null) {
+        jointCalcResult?.let { result ->
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                    border = BorderStroke(1.5.dp, PrimaryPurple.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Calculation Summary",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryPurple
+                        )
+                        HorizontalDivider(color = DarkBorder, thickness = 0.5.dp)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Total Stones Created:", color = TextPrimary, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "${result.totalStonesCreated} Stones",
+                                color = StarGold,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Weapon Stones: ${result.weaponStonesCreated}", fontSize = 13.sp, color = WeaponPink, fontWeight = FontWeight.SemiBold)
+                                Text("Armor Stones: ${result.armorStonesCreated}", fontSize = 13.sp, color = ArmorBlue, fontWeight = FontWeight.SemiBold)
+                            }
+                            val sharedPoolVal = sharedPiecesInput.toIntOrNull() ?: 0
+                            if (sharedPoolVal > 0) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Shared Used (W): +${result.sharedUsedForWeapon}", fontSize = 12.sp, color = TextMuted)
+                                    Text("Shared Used (A): +${result.sharedUsedForArmor}", fontSize = 12.sp, color = TextMuted)
+                                    val leftover = sharedPoolVal - result.sharedUsedForWeapon - result.sharedUsedForArmor
+                                    Text("Leftover Shared: $leftover", fontSize = 12.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Weapon Results
-                    weaponCalcResult?.let { result ->
+                    if (result.weaponDistributions.isNotEmpty()) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
@@ -1520,57 +1587,42 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                                 modifier = Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Optimal Weapon Allocations",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = WeaponPink
-                                    )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Stones: ", color = TextMuted, fontSize = 12.sp)
-                                        Text(result.totalStonesCreated.toString(), color = StarGold, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    }
-                                }
-
+                                Text(
+                                    text = "Optimal Weapon Allocations",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = WeaponPink
+                                )
                                 HorizontalDivider(color = DarkBorder, thickness = 0.5.dp)
 
-                                if (result.distributions.isEmpty()) {
-                                    Text("No Weapon allocations needed.", color = TextMuted, fontSize = 13.sp)
-                                } else {
-                                    result.distributions.forEach { row ->
-                                        Card(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                                            border = BorderStroke(1.dp, DarkBorder.copy(alpha = 0.5f))
-                                        ) {
-                                            Column(modifier = Modifier.padding(12.dp)) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(row.charName, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                                    Text("+${row.givenPieces} pieces", color = WeaponPink, fontWeight = FontWeight.SemiBold)
-                                                }
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text("Result: ", color = TextMuted, fontSize = 12.sp)
-                                                    Text("${row.previousPieces} ➔ ${row.currentPieces}", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                                    if (row.stonesAdded > 0) {
-                                                        Spacer(modifier = Modifier.width(8.dp))
-                                                        Text(
-                                                            text = " (+${row.stonesAdded} Stone${if (row.stonesAdded > 1) "s" else ""}!)",
-                                                            color = StarGold,
-                                                            fontWeight = FontWeight.Bold,
-                                                            fontSize = 12.sp
-                                                        )
-                                                    }
+                                result.weaponDistributions.forEach { row ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                                        border = BorderStroke(1.dp, DarkBorder.copy(alpha = 0.5f))
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(row.charName, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                                Text("+${row.givenPieces} pieces", color = WeaponPink, fontWeight = FontWeight.SemiBold)
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text("Result: ", color = TextMuted, fontSize = 12.sp)
+                                                Text("${row.previousPieces} ➔ ${row.currentPieces}", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                                if (row.stonesAdded > 0) {
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = " (+${row.stonesAdded} Stone${if (row.stonesAdded > 1) "s" else ""}!)",
+                                                        color = StarGold,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp
+                                                    )
                                                 }
                                             }
                                         }
@@ -1581,7 +1633,7 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                     }
 
                     // Armor Results
-                    armorCalcResult?.let { result ->
+                    if (result.armorDistributions.isNotEmpty()) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
@@ -1591,57 +1643,42 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                                 modifier = Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Optimal Armor Allocations",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = ArmorBlue
-                                    )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Stones: ", color = TextMuted, fontSize = 12.sp)
-                                        Text(result.totalStonesCreated.toString(), color = StarGold, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    }
-                                }
-
+                                Text(
+                                    text = "Optimal Armor Allocations",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ArmorBlue
+                                )
                                 HorizontalDivider(color = DarkBorder, thickness = 0.5.dp)
 
-                                if (result.distributions.isEmpty()) {
-                                    Text("No Armor allocations needed.", color = TextMuted, fontSize = 13.sp)
-                                } else {
-                                    result.distributions.forEach { row ->
-                                        Card(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                                            border = BorderStroke(1.dp, DarkBorder.copy(alpha = 0.5f))
-                                        ) {
-                                            Column(modifier = Modifier.padding(12.dp)) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(row.charName, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                                    Text("+${row.givenPieces} pieces", color = ArmorBlue, fontWeight = FontWeight.SemiBold)
-                                                }
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text("Result: ", color = TextMuted, fontSize = 12.sp)
-                                                    Text("${row.previousPieces} ➔ ${row.currentPieces}", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                                    if (row.stonesAdded > 0) {
-                                                        Spacer(modifier = Modifier.width(8.dp))
-                                                        Text(
-                                                            text = " (+${row.stonesAdded} Stone${if (row.stonesAdded > 1) "s" else ""}!)",
-                                                            color = StarGold,
-                                                            fontWeight = FontWeight.Bold,
-                                                            fontSize = 12.sp
-                                                        )
-                                                    }
+                                result.armorDistributions.forEach { row ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                                        border = BorderStroke(1.dp, DarkBorder.copy(alpha = 0.5f))
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(row.charName, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                                Text("+${row.givenPieces} pieces", color = ArmorBlue, fontWeight = FontWeight.SemiBold)
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text("Result: ", color = TextMuted, fontSize = 12.sp)
+                                                Text("${row.previousPieces} ➔ ${row.currentPieces}", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                                if (row.stonesAdded > 0) {
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = " (+${row.stonesAdded} Stone${if (row.stonesAdded > 1) "s" else ""}!)",
+                                                        color = StarGold,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp
+                                                    )
                                                 }
                                             }
                                         }
