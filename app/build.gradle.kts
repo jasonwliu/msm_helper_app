@@ -5,11 +5,15 @@ plugins {
   id("maven-publish")
 }
 
+base {
+    archivesName.set("msmhelper-1.0")
+}
+
 android {
-    namespace = "com.example.msmhelper"
+    namespace = "com.gcirl.msmhelper"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.example.msmhelper"
+        applicationId = "com.gcirl.msmhelper"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -105,11 +109,11 @@ dependencies {
 publishing {
     publications {
         create<MavenPublication>("gpr") {
-            groupId = "com.example.msmhelper"
+            groupId = "com.gcirl.msmhelper"
             artifactId = "msmhelper"
             version = "1.0.0"
 
-            artifact(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk")) {
+            artifact(layout.buildDirectory.file("outputs/apk/debug/msmhelper-1.0-debug.apk")) {
                 classifier = "debug"
                 extension = "apk"
             }
