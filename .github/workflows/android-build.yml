@@ -46,10 +46,11 @@ jobs:
         keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep -E "SHA1:|SHA256:" || true
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug
+      run: ./gradlew assembleDebug -PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }}
 
-    - name: Rename APK to include Run Number (Patch version)
-      run: mv app/build/outputs/apk/debug/msmhelper-1.0-debug.apk app/build/outputs/apk/debug/msmhelper-1.0.${{ github.run_number }}-debug.apk
+    - name: Print certificate fingerprint of built APK
+      run: |
+        keytool -printcert -jarfile app/build/outputs/apk/debug/msmhelper-1.0.${{ github.run_number }}-debug.apk | grep -E "SHA1:|SHA256:" || true
 
     - name: Upload Debug APK Artifact
       uses: actions/upload-artifact@v4
