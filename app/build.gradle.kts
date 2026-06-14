@@ -2,7 +2,6 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
-  id("maven-publish")
 }
 
 base {
@@ -106,27 +105,4 @@ dependencies {
   }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("gpr") {
-            groupId = "com.gcirl.msmhelper"
-            artifactId = "msmhelper"
-            version = "1.0.0"
 
-            artifact(layout.buildDirectory.file("outputs/apk/debug/msmhelper-1.0-debug.apk")) {
-                classifier = "debug"
-                extension = "apk"
-            }
-        }
-    }
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/${System.getenv("GITHUB_REPOSITORY")}")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
-}
