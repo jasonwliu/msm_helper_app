@@ -38,16 +38,24 @@ jobs:
         mkdir -p ~/.android
         echo "$DEBUG_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
 
+    - name: Print fingerprint of decoded secret debug keystore
+      env:
+        DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+      if: env.DEBUG_KEYSTORE_BASE64 != ''
+      run: |
+        keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep -E "SHA1:|SHA256:" || true
+
     - name: Build Debug APK
       run: ./gradlew assembleDebug
+
+    - name: Rename APK to include Run Number (Patch version)
+      run: mv app/build/outputs/apk/debug/msmhelper-1.0-debug.apk app/build/outputs/apk/debug/msmhelper-1.0.${{ github.run_number }}-debug.apk
 
     - name: Upload Debug APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: msm-helper-debug-apk
-        path: app/build/outputs/apk/debug/msmhelper-1.0-debug.apk
-
-
+        path: app/build/outputs/apk/debug/msmhelper-1.0.${{ github.run_number }}-debug.apk
 
     - name: Create GitHub Release
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
@@ -55,7 +63,7 @@ jobs:
       with:
         tag_name: v1.0.${{ github.run_number }}
         name: Release v1.0.${{ github.run_number }}
-        files: app/build/outputs/apk/debug/msmhelper-1.0-debug.apk
+        files: app/build/outputs/apk/debug/msmhelper-1.0.${{ github.run_number }}-debug.apk
         draft: false
         prerelease: false
       env:
