@@ -1195,7 +1195,12 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                     Toast.makeText(context, "Signed in successfully!", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(context, "Sign-in failed. Please verify API configuration.", Toast.LENGTH_SHORT).show()
+                    val details = if (e is com.google.android.gms.common.api.ApiException) {
+                        "ApiException code ${e.statusCode}: ${e.status.statusMessage ?: e.message}"
+                    } else {
+                        "${e.javaClass.simpleName}: ${e.message}"
+                    }
+                    Toast.makeText(context, "Sign-in failed: $details", Toast.LENGTH_LONG).show()
                 }
             }
 
