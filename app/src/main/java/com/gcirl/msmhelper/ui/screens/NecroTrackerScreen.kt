@@ -1647,18 +1647,58 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                                             }
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text("Result: ", color = TextMuted, fontSize = 12.sp)
-                                                Text("${row.previousPieces} ➔ ${row.currentPieces}", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                                Column {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text("Result: ", color = TextMuted, fontSize = 12.sp)
+                                                        Text("${row.previousPieces} ➔ ${row.currentPieces}", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                                    }
+                                                    if (row.stonesAdded > 0) {
+                                                        Text(
+                                                            text = " (+${row.stonesAdded} Stone${if (row.stonesAdded > 1) "s" else ""}!)",
+                                                            color = StarGold,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 12.sp
+                                                        )
+                                                    }
+                                                }
                                                 if (row.stonesAdded > 0) {
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Text(
-                                                        text = " (+${row.stonesAdded} Stone${if (row.stonesAdded > 1) "s" else ""}!)",
-                                                        color = StarGold,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 12.sp
-                                                    )
+                                                    Button(
+                                                        onClick = {
+                                                            val wPool = weaponPiecesInput.toIntOrNull() ?: 0
+                                                            val aPool = armorPiecesInput.toIntOrNull() ?: 0
+                                                            val sPool = sharedPiecesInput.toIntOrNull() ?: 0
+                                                            viewModel.craftIndividualStone(
+                                                                charName = row.charName,
+                                                                givenPieces = row.givenPieces,
+                                                                currentPieces = row.currentPieces,
+                                                                stonesAdded = row.stonesAdded,
+                                                                type = "weapon",
+                                                                weaponPool = wPool,
+                                                                armorPool = aPool,
+                                                                sharedPool = sPool
+                                                            ) { leftoverW, leftoverA, leftoverS ->
+                                                                weaponPiecesInput = if (leftoverW > 0) leftoverW.toString() else ""
+                                                                armorPiecesInput = if (leftoverA > 0) leftoverA.toString() else ""
+                                                                sharedPiecesInput = if (leftoverS > 0) leftoverS.toString() else ""
+                                                                jointCalcResult = null
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    "Successfully crafted ${row.stonesAdded} stone(s) for ${row.charName}!",
+                                                                    Toast.LENGTH_LONG
+                                                                ).show()
+                                                            }
+                                                        },
+                                                        colors = ButtonDefaults.buttonColors(containerColor = StarGold, contentColor = Color.Black),
+                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                                        shape = RoundedCornerShape(4.dp),
+                                                        modifier = Modifier.height(28.dp)
+                                                    ) {
+                                                        Text("Craft", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                    }
                                                 }
                                             }
                                         }
@@ -1703,18 +1743,58 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                                             }
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text("Result: ", color = TextMuted, fontSize = 12.sp)
-                                                Text("${row.previousPieces} ➔ ${row.currentPieces}", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                                Column {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text("Result: ", color = TextMuted, fontSize = 12.sp)
+                                                        Text("${row.previousPieces} ➔ ${row.currentPieces}", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                                    }
+                                                    if (row.stonesAdded > 0) {
+                                                        Text(
+                                                            text = " (+${row.stonesAdded} Stone${if (row.stonesAdded > 1) "s" else ""}!)",
+                                                            color = StarGold,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 12.sp
+                                                        )
+                                                    }
+                                                }
                                                 if (row.stonesAdded > 0) {
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Text(
-                                                        text = " (+${row.stonesAdded} Stone${if (row.stonesAdded > 1) "s" else ""}!)",
-                                                        color = StarGold,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 12.sp
-                                                    )
+                                                    Button(
+                                                        onClick = {
+                                                            val wPool = weaponPiecesInput.toIntOrNull() ?: 0
+                                                            val aPool = armorPiecesInput.toIntOrNull() ?: 0
+                                                            val sPool = sharedPiecesInput.toIntOrNull() ?: 0
+                                                            viewModel.craftIndividualStone(
+                                                                charName = row.charName,
+                                                                givenPieces = row.givenPieces,
+                                                                currentPieces = row.currentPieces,
+                                                                stonesAdded = row.stonesAdded,
+                                                                type = "armor",
+                                                                weaponPool = wPool,
+                                                                armorPool = aPool,
+                                                                sharedPool = sPool
+                                                            ) { leftoverW, leftoverA, leftoverS ->
+                                                                weaponPiecesInput = if (leftoverW > 0) leftoverW.toString() else ""
+                                                                armorPiecesInput = if (leftoverA > 0) leftoverA.toString() else ""
+                                                                sharedPiecesInput = if (leftoverS > 0) leftoverS.toString() else ""
+                                                                jointCalcResult = null
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    "Successfully crafted ${row.stonesAdded} stone(s) for ${row.charName}!",
+                                                                    Toast.LENGTH_LONG
+                                                                ).show()
+                                                            }
+                                                        },
+                                                        colors = ButtonDefaults.buttonColors(containerColor = StarGold, contentColor = Color.Black),
+                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                                        shape = RoundedCornerShape(4.dp),
+                                                        modifier = Modifier.height(28.dp)
+                                                    ) {
+                                                        Text("Craft", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                    }
                                                 }
                                             }
                                         }

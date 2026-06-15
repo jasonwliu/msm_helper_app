@@ -679,14 +679,26 @@
             }
 
             const resultBox = document.getElementById('calc-result');
+            resultBox.innerHTML = '';
             resultBox.style.display = 'block';
-            let output = `Optimal Distribution Results:\n`;
-            output += `Total Stones Created: ${stonesCreated}\n`;
-            output += `------------------------------------\n`;
+
+            const summaryDiv = document.createElement('div');
+            summaryDiv.style.fontWeight = 'bold';
+            summaryDiv.style.marginBottom = '10px';
+            summaryDiv.style.color = 'var(--primary)';
+            summaryDiv.textContent = `Optimal Distribution Results (Total Stones Created: ${stonesCreated})`;
+            resultBox.appendChild(summaryDiv);
+
+            const divider = document.createElement('div');
+            divider.style.borderTop = '1px solid var(--border)';
+            divider.style.marginBottom = '15px';
+            resultBox.appendChild(divider);
 
             let actuallyGiven = pool.filter(p => p.given > 0);
             if (actuallyGiven.length === 0) {
-                output += "Not enough pieces to do anything meaningful.";
+                const noResult = document.createElement('div');
+                noResult.textContent = "Not enough pieces to do anything meaningful.";
+                resultBox.appendChild(noResult);
             } else {
                 actuallyGiven.forEach(p => {
                     const original = p.current - p.given;
@@ -695,16 +707,55 @@
                     const stoneDiff = newStones - oldStones;
                     const stoneText = stoneDiff > 0 ? ` (+${stoneDiff} Stone${stoneDiff > 1 ? 's' : ''}!)` : '';
                     
-                    output += `Give ${p.given} pieces to ${p.name}\n`;
-                    output += `  ↳ Result: ${original} ➔ ${p.current} pieces${stoneText}\n\n`;
+                    const rowDiv = document.createElement('div');
+                    rowDiv.style.display = 'flex';
+                    rowDiv.style.justifyContent = 'space-between';
+                    rowDiv.style.alignItems = 'center';
+                    rowDiv.style.background = 'var(--surface)';
+                    rowDiv.style.border = '1px solid var(--border)';
+                    rowDiv.style.borderRadius = '4px';
+                    rowDiv.style.padding = '10px';
+                    rowDiv.style.marginBottom = '10px';
+
+                    const textContainer = document.createElement('div');
+                    textContainer.innerHTML = `
+                        <strong>Give ${p.given} pieces to ${p.name}</strong><br>
+                        <span style="font-size: 13px; color: var(--text-muted);">Result: ${original} ➔ ${p.current} pieces</span>
+                        ${stoneDiff > 0 ? `<span style="font-size: 13px; color: var(--primary); font-weight: bold;">${stoneText}</span>` : ''}
+                    `;
+                    rowDiv.appendChild(textContainer);
+
+                    if (stoneDiff > 0) {
+                        const rowBtn = document.createElement('button');
+                        rowBtn.textContent = 'Craft';
+                        rowBtn.style.width = 'auto';
+                        rowBtn.style.padding = '5px 12px';
+                        rowBtn.style.fontSize = '13px';
+                        rowBtn.style.backgroundColor = 'var(--secondary)';
+                        rowBtn.style.color = 'black';
+                        rowBtn.onclick = function() {
+                            const idx = characters.findIndex(c => c.name === p.name);
+                            if (idx !== -1) {
+                                characters[idx][type] = p.current - (stoneDiff * 150);
+                            }
+                            
+                            const leftover = Math.max(0, totalToDistribute - p.given);
+                            document.getElementById('calc-amount').value = leftover > 0 ? leftover : '';
+                            
+                            saveData();
+                            alert(`Successfully crafted ${stoneDiff} stone(s) for ${p.name}!`);
+                            resultBox.style.display = 'none';
+                        };
+                        rowDiv.appendChild(rowBtn);
+                    }
+                    
+                    resultBox.appendChild(rowDiv);
                 });
             }
 
-            resultBox.textContent = output;
-
             if (stonesCreated > 0 && actuallyGiven.length > 0) {
                 const craftBtn = document.createElement('button');
-                craftBtn.textContent = `Craft ${stonesCreated} Stone${stonesCreated > 1 ? 's' : ''}`;
+                craftBtn.textContent = `Craft All (${stonesCreated} Stone${stonesCreated > 1 ? 's' : ''})`;
                 craftBtn.style.marginTop = '15px';
                 craftBtn.style.backgroundColor = 'var(--primary)';
                 craftBtn.style.color = 'black';

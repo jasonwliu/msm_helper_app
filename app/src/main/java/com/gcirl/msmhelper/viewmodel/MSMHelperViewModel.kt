@@ -538,4 +538,49 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
 
         onComplete(leftoverW, leftoverA, leftoverS)
     }
+
+    fun craftIndividualStone(
+        charName: String,
+        givenPieces: Int,
+        currentPieces: Int,
+        stonesAdded: Int,
+        type: String,
+        weaponPool: Int,
+        armorPool: Int,
+        sharedPool: Int,
+        onComplete: (leftoverW: Int, leftoverA: Int, leftoverS: Int) -> Unit
+    ) {
+        val chars = _characters.value.toMutableList()
+        val idx = chars.indexOfFirst { it.name == charName }
+        if (idx != -1) {
+            val original = chars[idx]
+            val finalPieces = currentPieces - (stonesAdded * 150)
+            chars[idx] = if (type == "weapon") {
+                original.copy(weapon = maxOf(0, finalPieces))
+            } else {
+                original.copy(armor = maxOf(0, finalPieces))
+            }
+            _characters.value = chars
+            saveData()
+        }
+
+        // Calculate leftovers using our heuristic
+        var leftoverW = weaponPool
+        var leftoverA = armorPool
+        var leftoverS = sharedPool
+
+        if (type == "weapon") {
+            val usedFromW = minOf(weaponPool, givenPieces)
+            val usedFromS = givenPieces - usedFromW
+            leftoverW = maxOf(0, weaponPool - usedFromW)
+            leftoverS = maxOf(0, sharedPool - usedFromS)
+        } else {
+            val usedFromA = minOf(armorPool, givenPieces)
+            val usedFromS = givenPieces - usedFromA
+            leftoverA = maxOf(0, armorPool - usedFromA)
+            leftoverS = maxOf(0, sharedPool - usedFromS)
+        }
+
+        onComplete(leftoverW, leftoverA, leftoverS)
+    }
 }
