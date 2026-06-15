@@ -495,4 +495,47 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     ): StoneOptimizer.JointCalculatorResult? {
         return StoneOptimizer.calculateJointOptimalDistribution(_characters.value, weaponPool, armorPool, sharedPool)
     }
+
+    fun craftStonesFromJointResult(
+        result: StoneOptimizer.JointCalculatorResult,
+        weaponPool: Int,
+        armorPool: Int,
+        sharedPool: Int,
+        onComplete: (leftoverW: Int, leftoverA: Int, leftoverS: Int) -> Unit
+    ) {
+        val chars = _characters.value.toMutableList()
+
+        // Apply weapon allocations
+        result.weaponDistributions.forEach { row ->
+            val idx = chars.indexOfFirst { it.name == row.charName }
+            if (idx != -1) {
+                val original = chars[idx]
+                val finalPieces = row.currentPieces - (row.stonesAdded * 150)
+                chars[idx] = original.copy(weapon = maxOf(0, finalPieces))
+            }
+        }
+
+        // Apply armor allocations
+        result.armorDistributions.forEach { row ->
+            val idx = chars.indexOfFirst { it.name == row.charName }
+            if (idx != -1) {
+                val original = chars[idx]
+                val finalPieces = row.currentPieces - (row.stonesAdded * 150)
+                chars[idx] = original.copy(armor = maxOf(0, finalPieces))
+            }
+        }
+
+        _characters.value = chars
+        saveData()
+
+        // Calculate leftovers
+        val totalWeaponAllocated = result.weaponDistributions.sumOf { it.givenPieces }
+        val totalArmorAllocated = result.armorDistributions.sumOf { it.givenPieces }
+
+        val leftoverW = maxOf(0, weaponPool - (totalWeaponAllocated - result.sharedUsedForWeapon))
+        val leftoverA = maxOf(0, armorPool - (totalArmorAllocated - result.sharedUsedForArmor))
+        val leftoverS = maxOf(0, sharedPool - result.sharedUsedForWeapon - result.sharedUsedForArmor)
+
+        onComplete(leftoverW, leftoverA, leftoverS)
+    }
 }

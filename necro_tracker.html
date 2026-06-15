@@ -701,6 +701,36 @@
             }
 
             resultBox.textContent = output;
+
+            if (stonesCreated > 0 && actuallyGiven.length > 0) {
+                const craftBtn = document.createElement('button');
+                craftBtn.textContent = `Craft ${stonesCreated} Stone${stonesCreated > 1 ? 's' : ''}`;
+                craftBtn.style.marginTop = '15px';
+                craftBtn.style.backgroundColor = 'var(--primary)';
+                craftBtn.style.color = 'black';
+                craftBtn.style.width = '100%';
+                craftBtn.onclick = function() {
+                    pool.forEach(p => {
+                        const idx = characters.findIndex(c => c.name === p.name);
+                        if (idx !== -1) {
+                            const original = p.current - p.given;
+                            const oldStones = Math.floor(original / 150);
+                            const newStones = Math.floor(p.current / 150);
+                            const stonesAdded = newStones - oldStones;
+                            characters[idx][type] = p.current - (stonesAdded * 150);
+                        }
+                    });
+                    
+                    const usedPieces = pool.reduce((sum, p) => sum + p.given, 0);
+                    const leftover = Math.max(0, totalToDistribute - usedPieces);
+                    document.getElementById('calc-amount').value = leftover > 0 ? leftover : '';
+                    
+                    saveData();
+                    alert(`Successfully crafted ${stonesCreated} stone(s)!`);
+                    resultBox.style.display = 'none';
+                };
+                resultBox.appendChild(craftBtn);
+            }
         }
 
         // Run on load

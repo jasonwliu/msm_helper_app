@@ -1407,6 +1407,7 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
 @Composable
 fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
     val characters by viewModel.characters.collectAsState()
+    val context = LocalContext.current
 
     var weaponPiecesInput by remember { mutableStateOf("") }
     var armorPiecesInput by remember { mutableStateOf("") }
@@ -1565,6 +1566,41 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                                     val leftover = sharedPoolVal - result.sharedUsedForWeapon - result.sharedUsedForArmor
                                     Text("Leftover Shared: $leftover", fontSize = 12.sp, color = TextMuted, fontWeight = FontWeight.Bold)
                                 }
+                            }
+                        }
+
+                        if (result.totalStonesCreated > 0) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = {
+                                    val wPool = weaponPiecesInput.toIntOrNull() ?: 0
+                                    val aPool = armorPiecesInput.toIntOrNull() ?: 0
+                                    val sPool = sharedPiecesInput.toIntOrNull() ?: 0
+                                    viewModel.craftStonesFromJointResult(
+                                        result = result,
+                                        weaponPool = wPool,
+                                        armorPool = aPool,
+                                        sharedPool = sPool
+                                    ) { leftoverW, leftoverA, leftoverS ->
+                                        weaponPiecesInput = if (leftoverW > 0) leftoverW.toString() else ""
+                                        armorPiecesInput = if (leftoverA > 0) leftoverA.toString() else ""
+                                        sharedPiecesInput = if (leftoverS > 0) leftoverS.toString() else ""
+                                        jointCalcResult = null
+                                        Toast.makeText(
+                                            context,
+                                            "Successfully crafted ${result.totalStonesCreated} stone(s)!",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = StarGold,
+                                    contentColor = Color.Black
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text("Craft ${result.totalStonesCreated} Stones", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
