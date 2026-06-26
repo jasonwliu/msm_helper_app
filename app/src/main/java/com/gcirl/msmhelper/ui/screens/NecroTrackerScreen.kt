@@ -1049,10 +1049,6 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
     }
 }
 
-        item { Spacer(modifier = Modifier.height(20.dp)) }
-    }
-}
-
 @Composable
 fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
     val characters by viewModel.characters.collectAsState()
@@ -1454,10 +1450,6 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                 }
             }
         }
-
-        item { Spacer(modifier = Modifier.height(20.dp)) }
-    }
-}
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
     }

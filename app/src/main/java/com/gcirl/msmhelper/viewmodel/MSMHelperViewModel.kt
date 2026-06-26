@@ -445,8 +445,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 val action = NecroAction(
                     actionType = "craft_stone",
                     timestamp = timeStamp,
-                    affected = listOf(AffectedCharacter(original.name, type, currentAmount, newPieces)),
-                    piecesSubtracted = 150
+                    affected = listOf(AffectedCharacter(original.name, type, currentAmount, newPieces))
                 )
                 _necroHistory.value = listOf(action) + _necroHistory.value
 

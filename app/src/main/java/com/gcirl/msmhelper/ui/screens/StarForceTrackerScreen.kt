@@ -348,6 +348,7 @@ fun DistributionRow(
                     .fillMaxHeight()
                     .fillMaxWidth((percentage / 100).toFloat().coerceIn(0f, 1f))
                     .background(color, RoundedCornerShape(4.dp))
+            )
         }
     }
 }
