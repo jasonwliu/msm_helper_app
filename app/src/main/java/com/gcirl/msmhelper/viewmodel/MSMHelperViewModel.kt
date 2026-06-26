@@ -29,14 +29,26 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     private val _activeCharIndex = MutableStateFlow(0)
     val activeCharIndex: StateFlow<Int> = _activeCharIndex.asStateFlow()
 
-    private val _currentSf = MutableStateFlow(10)
-    val currentSf: StateFlow<Int> = _currentSf.asStateFlow()
+    private val _necroHistory = MutableStateFlow<List<NecroAction>>(emptyList())
+    val necroHistory: StateFlow<List<NecroAction>> = _necroHistory.asStateFlow()
 
-    private val _sfStats = MutableStateFlow<Map<Int, SfLevelStats>>(emptyMap())
-    val sfStats: StateFlow<Map<Int, SfLevelStats>> = _sfStats.asStateFlow()
+    // Persistent calculator pool inputs
+    private val _weaponPoolInput = MutableStateFlow("")
+    val weaponPoolInput = _weaponPoolInput.asStateFlow()
 
-    private val _sfHistory = MutableStateFlow<List<SfHistoryItem>>(emptyList())
-    val sfHistory: StateFlow<List<SfHistoryItem>> = _sfHistory.asStateFlow()
+    private val _armorPoolInput = MutableStateFlow("")
+    val armorPoolInput = _armorPoolInput.asStateFlow()
+
+    private val _sharedPoolInput = MutableStateFlow("")
+    val sharedPoolInput = _sharedPoolInput.asStateFlow()
+
+    private val _jointCalcResult = MutableStateFlow<com.gcirl.msmhelper.data.StoneOptimizer.JointCalculatorResult?>(null)
+    val jointCalcResult = _jointCalcResult.asStateFlow()
+
+    fun setWeaponPoolInput(value: String) { _weaponPoolInput.value = value }
+    fun setArmorPoolInput(value: String) { _armorPoolInput.value = value }
+    fun setSharedPoolInput(value: String) { _sharedPoolInput.value = value }
+    fun setJointCalcResult(result: com.gcirl.msmhelper.data.StoneOptimizer.JointCalculatorResult?) { _jointCalcResult.value = result }
 
     // Transient UI selection states for Necro Tracker
     private val _currentBase = MutableStateFlow(0)
@@ -76,6 +88,12 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         _syncErrorMessage.value = null
     }
 
+    private val jsonParser = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        encodeDefaults = true
+    }
+
     init {
         loadData()
         checkGoogleSignInSilent()
@@ -86,12 +104,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         val state = MSMAppState(
             characters = _characters.value,
             activeCharIndex = _activeCharIndex.value,
-            currentSf = _currentSf.value,
-            sfStats = _sfStats.value,
-            sfHistory = _sfHistory.value
+            necroHistory = _necroHistory.value
         )
         try {
-            val jsonStr = Json.encodeToString(state)
+            val jsonStr = jsonParser.encodeToString(state)
             sharedPrefs.edit().putString("app_state", jsonStr).apply()
             
             // Auto-backup to a local file in external files directory for disaster recovery
@@ -127,12 +143,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         
         if (jsonStr != null) {
             try {
-                val state = Json.decodeFromString<MSMAppState>(jsonStr)
+                val state = jsonParser.decodeFromString<MSMAppState>(jsonStr)
                 _characters.value = state.characters
                 _activeCharIndex.value = state.activeCharIndex
-                _currentSf.value = state.currentSf
-                _sfStats.value = state.sfStats
-                _sfHistory.value = state.sfHistory
+                _necroHistory.value = state.necroHistory
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -187,11 +201,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             val state = MSMAppState(
                 characters = _characters.value,
                 activeCharIndex = _activeCharIndex.value,
-                currentSf = _currentSf.value,
-                sfStats = _sfStats.value,
-                sfHistory = _sfHistory.value
+                necroHistory = _necroHistory.value
             )
-            val jsonStr = Json.encodeToString(state)
+            val jsonStr = jsonParser.encodeToString(state)
             val success = googleDriveSyncManager.uploadBackup(account, jsonStr)
             
             if (success) {
@@ -242,12 +254,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         val state = MSMAppState(
             characters = _characters.value,
             activeCharIndex = _activeCharIndex.value,
-            currentSf = _currentSf.value,
-            sfStats = _sfStats.value,
-            sfHistory = _sfHistory.value
+            necroHistory = _necroHistory.value
         )
         return try {
-            Json.encodeToString(state)
+            jsonParser.encodeToString(state)
         } catch (e: Exception) {
             ""
         }
@@ -257,20 +267,19 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         val trimmed = jsonStr.trim()
         return try {
             // 1. Try decoding as full MSMAppState
-            val state = Json.decodeFromString<MSMAppState>(trimmed)
+            val state = jsonParser.decodeFromString<MSMAppState>(trimmed)
             _characters.value = state.characters
             _activeCharIndex.value = state.activeCharIndex
-            _currentSf.value = state.currentSf
-            _sfStats.value = state.sfStats
-            _sfHistory.value = state.sfHistory
+            _necroHistory.value = state.necroHistory
             saveData()
             true
         } catch (e1: Exception) {
             try {
                 // 2. Fallback to decoding as List<Character> (web backup format)
-                val charactersList = Json.decodeFromString<List<Character>>(trimmed)
+                val charactersList = jsonParser.decodeFromString<List<Character>>(trimmed)
                 _characters.value = charactersList
                 _activeCharIndex.value = 0
+                _necroHistory.value = emptyList()
                 saveData()
                 true
             } catch (e2: Exception) {
@@ -348,12 +357,25 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
 
         if (activeIndex in chars.indices) {
             val original = chars[activeIndex]
+            val oldPieces = if (type == "weapon") original.weapon else original.armor
+            val newPieces = oldPieces + total
             chars[activeIndex] = if (type == "weapon") {
-                original.copy(weapon = original.weapon + total)
+                original.copy(weapon = newPieces)
             } else {
-                original.copy(armor = original.armor + total)
+                original.copy(armor = newPieces)
             }
             _characters.value = chars
+
+            // Log drop action in history
+            val timeStamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+            val action = NecroAction(
+                actionType = "add_drop",
+                timestamp = timeStamp,
+                affected = listOf(AffectedCharacter(original.name, type, oldPieces, newPieces)),
+                base = _currentBase.value,
+                cluster = _currentCluster.value
+            )
+            _necroHistory.value = listOf(action) + _necroHistory.value
         }
 
         // Reset base and cluster, advance character (keep day override active)
@@ -410,77 +432,27 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             val original = chars[index]
             val currentAmount = if (type == "weapon") original.weapon else original.armor
             if (currentAmount >= 150) {
+                val newPieces = currentAmount - 150
                 chars[index] = if (type == "weapon") {
-                    original.copy(weapon = currentAmount - 150)
+                    original.copy(weapon = newPieces)
                 } else {
-                    original.copy(armor = currentAmount - 150)
+                    original.copy(armor = newPieces)
                 }
                 _characters.value = chars
+
+                // Log stone craft action
+                val timeStamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                val action = NecroAction(
+                    actionType = "craft_stone",
+                    timestamp = timeStamp,
+                    affected = listOf(AffectedCharacter(original.name, type, currentAmount, newPieces)),
+                    piecesSubtracted = 150
+                )
+                _necroHistory.value = listOf(action) + _necroHistory.value
+
                 saveData()
             }
         }
-    }
-
-    // --- Star Force Tracker Actions ---
-    fun setInitialSf(sf: Int) {
-        _currentSf.value = sf.coerceIn(0, 30)
-        saveData()
-    }
-
-    fun recordOutcome(outcome: String, isCatch: Boolean) {
-        val sf = _currentSf.value
-        val currentStats = _sfStats.value.toMutableMap()
-        
-        // 1. Get or create level stats
-        val levelStats = currentStats[sf] ?: SfLevelStats()
-        
-        // 2. Record
-        currentStats[sf] = levelStats.record(outcome, isCatch)
-        _sfStats.value = currentStats
-
-        // 3. History item
-        val timeStamp = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-        val newItem = SfHistoryItem(timeStamp, sf, outcome, isCatch)
-        _sfHistory.value = listOf(newItem) + _sfHistory.value
-
-        // 4. Update SF level
-        if (outcome == "up") {
-            _currentSf.value = sf + 1
-        } else if (outcome == "derank") {
-            _currentSf.value = maxOf(0, sf - 1)
-        }
-
-        saveData()
-    }
-
-    fun undoLastAction() {
-        val hist = _sfHistory.value
-        if (hist.isEmpty()) return
-
-        val lastAction = hist.first()
-        val sf = lastAction.fromSf
-        val outcome = lastAction.outcome
-        val isCatch = lastAction.isCatch
-
-        // 1. Remove from history
-        _sfHistory.value = hist.drop(1)
-
-        // 2. Decrement stats
-        val currentStats = _sfStats.value.toMutableMap()
-        currentStats[sf]?.let { levelStats ->
-            val updated = levelStats.undo(outcome, isCatch)
-            if (updated.normal.total == 0 && updated.catchStats.total == 0) {
-                currentStats.remove(sf)
-            } else {
-                currentStats[sf] = updated
-            }
-        }
-        _sfStats.value = currentStats
-
-        // 3. Revert SF level
-        _currentSf.value = sf
-
-        saveData()
     }
 
     // --- Optimization Calculator Logic ---
@@ -504,6 +476,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         onComplete: (leftoverW: Int, leftoverA: Int, leftoverS: Int) -> Unit
     ) {
         val chars = _characters.value.toMutableList()
+        val affected = mutableListOf<AffectedCharacter>()
 
         // Apply weapon allocations
         result.weaponDistributions.forEach { row ->
@@ -511,6 +484,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             if (idx != -1) {
                 val original = chars[idx]
                 val finalPieces = row.currentPieces - (row.stonesAdded * 150)
+                affected.add(AffectedCharacter(row.charName, "weapon", original.weapon, finalPieces))
                 chars[idx] = original.copy(weapon = maxOf(0, finalPieces))
             }
         }
@@ -521,11 +495,25 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             if (idx != -1) {
                 val original = chars[idx]
                 val finalPieces = row.currentPieces - (row.stonesAdded * 150)
+                affected.add(AffectedCharacter(row.charName, "armor", original.armor, finalPieces))
                 chars[idx] = original.copy(armor = maxOf(0, finalPieces))
             }
         }
 
         _characters.value = chars
+
+        // Record action in history
+        val timeStamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val action = NecroAction(
+            actionType = "batch_craft",
+            timestamp = timeStamp,
+            affected = affected,
+            oldWeaponPool = if (weaponPool > 0) weaponPool.toString() else "",
+            oldArmorPool = if (armorPool > 0) armorPool.toString() else "",
+            oldSharedPool = if (sharedPool > 0) sharedPool.toString() else ""
+        )
+        _necroHistory.value = listOf(action) + _necroHistory.value
+
         saveData()
 
         // Calculate leftovers
@@ -551,18 +539,34 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         onComplete: (leftoverW: Int, leftoverA: Int, leftoverS: Int) -> Unit
     ) {
         val chars = _characters.value.toMutableList()
+        val affected = mutableListOf<AffectedCharacter>()
         val idx = chars.indexOfFirst { it.name == charName }
         if (idx != -1) {
             val original = chars[idx]
             val finalPieces = currentPieces - (stonesAdded * 150)
+            val oldPieces = if (type == "weapon") original.weapon else original.armor
+            affected.add(AffectedCharacter(charName, type, oldPieces, finalPieces))
             chars[idx] = if (type == "weapon") {
                 original.copy(weapon = maxOf(0, finalPieces))
             } else {
                 original.copy(armor = maxOf(0, finalPieces))
             }
             _characters.value = chars
-            saveData()
         }
+
+        // Record action in history
+        val timeStamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val action = NecroAction(
+            actionType = "craft_stone",
+            timestamp = timeStamp,
+            affected = affected,
+            oldWeaponPool = if (weaponPool > 0) weaponPool.toString() else "",
+            oldArmorPool = if (armorPool > 0) armorPool.toString() else "",
+            oldSharedPool = if (sharedPool > 0) sharedPool.toString() else ""
+        )
+        _necroHistory.value = listOf(action) + _necroHistory.value
+
+        saveData()
 
         // Calculate leftovers using our heuristic
         var leftoverW = weaponPool
@@ -582,5 +586,51 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         onComplete(leftoverW, leftoverA, leftoverS)
+    }
+
+    fun undoLastNecroAction(): String? {
+        val history = _necroHistory.value
+        if (history.isEmpty()) return null
+
+        val lastAction = history.first()
+        val chars = _characters.value.toMutableList()
+
+        lastAction.affected.forEach { affectedChar ->
+            val idx = chars.indexOfFirst { it.name == affectedChar.charName }
+            if (idx != -1) {
+                val original = chars[idx]
+                chars[idx] = if (affectedChar.statType == "weapon") {
+                    original.copy(weapon = affectedChar.oldPieces)
+                } else {
+                    original.copy(armor = affectedChar.oldPieces)
+                }
+            }
+        }
+
+        _characters.value = chars
+        _necroHistory.value = history.drop(1)
+
+        // Restore pool values if present in the history item
+        _weaponPoolInput.value = lastAction.oldWeaponPool
+        _armorPoolInput.value = lastAction.oldArmorPool
+        _sharedPoolInput.value = lastAction.oldSharedPool
+        _jointCalcResult.value = null // Reset calculator output
+
+        saveData()
+
+        return when (lastAction.actionType) {
+            "add_drop" -> {
+                val totalAdded = lastAction.base + lastAction.cluster
+                "Undid drop (+${totalAdded} pieces) for ${lastAction.affected.firstOrNull()?.charName}"
+            }
+            "craft_stone" -> "Undid stone craft for ${lastAction.affected.firstOrNull()?.charName}"
+            "batch_craft" -> "Undid batch stone craft for ${lastAction.affected.size} character(s)"
+            else -> "Undid last action"
+        }
+    }
+
+    fun clearNecroHistory() {
+        _necroHistory.value = emptyList()
+        saveData()
     }
 }

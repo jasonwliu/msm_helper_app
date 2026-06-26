@@ -10,69 +10,28 @@ data class Character(
 )
 
 @Serializable
-data class SfOutcomeStats(
-    val up: Int = 0,
-    val maintain: Int = 0,
-    val derank: Int = 0,
-    val breakCount: Int = 0,
-    val total: Int = 0
-) {
-    fun increment(outcome: String): SfOutcomeStats {
-        return when (outcome) {
-            "up" -> copy(up = up + 1, total = total + 1)
-            "maintain" -> copy(maintain = maintain + 1, total = total + 1)
-            "derank" -> copy(derank = derank + 1, total = total + 1)
-            "break" -> copy(breakCount = breakCount + 1, total = total + 1)
-            else -> this
-        }
-    }
-
-    fun decrement(outcome: String): SfOutcomeStats {
-        return when (outcome) {
-            "up" -> copy(up = maxOf(0, up - 1), total = maxOf(0, total - 1))
-            "maintain" -> copy(maintain = maxOf(0, maintain - 1), total = maxOf(0, total - 1))
-            "derank" -> copy(derank = maxOf(0, derank - 1), total = maxOf(0, total - 1))
-            "break" -> copy(breakCount = maxOf(0, breakCount - 1), total = maxOf(0, total - 1))
-            else -> this
-        }
-    }
-}
+data class AffectedCharacter(
+    val charName: String,
+    val statType: String, // "weapon" or "armor"
+    val oldPieces: Int,
+    val newPieces: Int
+)
 
 @Serializable
-data class SfLevelStats(
-    val normal: SfOutcomeStats = SfOutcomeStats(),
-    val catchStats: SfOutcomeStats = SfOutcomeStats()
-) {
-    fun record(outcome: String, isCatch: Boolean): SfLevelStats {
-        return if (isCatch) {
-            copy(catchStats = catchStats.increment(outcome))
-        } else {
-            copy(normal = normal.increment(outcome))
-        }
-    }
-
-    fun undo(outcome: String, isCatch: Boolean): SfLevelStats {
-        return if (isCatch) {
-            copy(catchStats = catchStats.decrement(outcome))
-        } else {
-            copy(normal = normal.decrement(outcome))
-        }
-    }
-}
-
-@Serializable
-data class SfHistoryItem(
-    val time: String,
-    val fromSf: Int,
-    val outcome: String, // "up", "maintain", "derank", "break"
-    val isCatch: Boolean
+data class NecroAction(
+    val actionType: String, // "add_drop", "craft_stone", "batch_craft"
+    val timestamp: String,
+    val affected: List<AffectedCharacter> = emptyList(),
+    val base: Int = 0,
+    val cluster: Int = 0,
+    val oldWeaponPool: String = "",
+    val oldArmorPool: String = "",
+    val oldSharedPool: String = ""
 )
 
 @Serializable
 data class MSMAppState(
     val characters: List<Character> = emptyList(),
     val activeCharIndex: Int = 0,
-    val currentSf: Int = 10,
-    val sfStats: Map<Int, SfLevelStats> = emptyMap(),
-    val sfHistory: List<SfHistoryItem> = emptyList()
+    val necroHistory: List<NecroAction> = emptyList()
 )

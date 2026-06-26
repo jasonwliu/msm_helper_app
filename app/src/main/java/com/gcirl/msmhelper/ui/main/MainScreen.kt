@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,8 +19,9 @@ import com.gcirl.msmhelper.theme.*
 import com.gcirl.msmhelper.ui.screens.DailyTrackerTab
 import com.gcirl.msmhelper.ui.screens.OverviewTab
 import com.gcirl.msmhelper.ui.screens.StoneMaximizerTab
-import com.gcirl.msmhelper.ui.screens.StarForceTrackerScreen
+import com.gcirl.msmhelper.ui.screens.NecroTrackerStatsScreen
 import com.gcirl.msmhelper.ui.screens.ReadyToCraftTab
+import com.gcirl.msmhelper.ui.screens.BackupRestoreTab
 import com.gcirl.msmhelper.viewmodel.MSMHelperViewModel
 import kotlinx.coroutines.launch
 
@@ -36,6 +38,7 @@ fun MainScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val necroHistory by viewModel.necroHistory.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -149,15 +152,37 @@ fun MainScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Item 4: Star Force Tracker
+                // Item 4: Necro Tracker
                 NavigationDrawerItem(
-                    label = { Text("Star Force Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Necro Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
                     selected = selectedTab == 4,
                     onClick = {
                         selectedTab = 4
                         scope.launch { drawerState.close() }
                     },
-                    icon = { Text("⭐", fontSize = 20.sp) },
+                    icon = { Text("📊", fontSize = 20.sp) },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = Color(0x22C59BFF),
+                        selectedIconColor = PrimaryPurple,
+                        selectedTextColor = PrimaryPurple,
+                        unselectedContainerColor = Color.Transparent,
+                        unselectedIconColor = TextMuted,
+                        unselectedTextColor = TextMuted
+                    ),
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Item 5: Backup & Restore
+                NavigationDrawerItem(
+                    label = { Text("Backup & Restore", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                    selected = selectedTab == 5,
+                    onClick = {
+                        selectedTab = 5
+                        scope.launch { drawerState.close() }
+                    },
+                    icon = { Text("💾", fontSize = 20.sp) },
                     colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = Color(0x22C59BFF),
                         selectedIconColor = PrimaryPurple,
@@ -182,7 +207,8 @@ fun MainScreen(
                                 1 -> "Character Overview"
                                 2 -> "Ready to Craft"
                                 3 -> "Stone Maximizer"
-                                else -> "Star Force Rates"
+                                4 -> "Necro Tracker"
+                                else -> "Backup & Restore"
                             },
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
@@ -196,6 +222,22 @@ fun MainScreen(
                                 contentDescription = "Open navigation menu",
                                 tint = PrimaryPurple
                             )
+                        }
+                    },
+                    actions = {
+                        if (necroHistory.isNotEmpty()) {
+                            IconButton(onClick = {
+                                val msg = viewModel.undoLastNecroAction()
+                                if (msg != null) {
+                                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Undo,
+                                    contentDescription = "Undo last action",
+                                    tint = PrimaryPurple
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -215,7 +257,8 @@ fun MainScreen(
                     1 -> OverviewTab(viewModel = viewModel)
                     2 -> ReadyToCraftTab(viewModel = viewModel)
                     3 -> StoneMaximizerTab(viewModel = viewModel)
-                    4 -> StarForceTrackerScreen(viewModel = viewModel)
+                    4 -> NecroTrackerStatsScreen(viewModel = viewModel)
+                    5 -> BackupRestoreTab(viewModel = viewModel)
                 }
             }
         }

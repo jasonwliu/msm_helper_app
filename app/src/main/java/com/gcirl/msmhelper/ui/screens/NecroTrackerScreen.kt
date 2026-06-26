@@ -827,54 +827,10 @@ fun DailyTrackerTab(
 @Composable
 fun OverviewTab(viewModel: MSMHelperViewModel) {
     val characters by viewModel.characters.collectAsState()
-    val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
     // Dialog state
     var charToDeleteIndex by remember { mutableIntStateOf(-1) }
-    var importJsonText by remember { mutableStateOf("") }
-    var showImportDialog by remember { mutableStateOf(false) }
-
-    // File picker launcher for importing JSON backup files
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val jsonText = inputStream?.bufferedReader()?.use { it.readText() }
-                if (jsonText != null) {
-                    val success = viewModel.importBackupJson(jsonText.trim())
-                    if (success) {
-                        Toast.makeText(context, "Data imported successfully!", Toast.LENGTH_SHORT).show()
-                        showImportDialog = false
-                    } else {
-                        Toast.makeText(context, "Failed to parse JSON file.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Toast.makeText(context, "Failed to read file.", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    val recoverableAuthLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            // User approved the permission, trigger backup!
-            viewModel.cloudBackupNow()
-        }
-    }
-
-    val recoverableIntent by viewModel.recoverableAuthIntent.collectAsState()
-    LaunchedEffect(recoverableIntent) {
-        recoverableIntent?.let {
-            recoverableAuthLauncher.launch(it)
-            viewModel.clearRecoverableAuthIntent()
-        }
-    }
 
     // Add Character state variables
     var newName by remember { mutableStateOf("") }
@@ -900,73 +856,6 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { charToDeleteIndex = -1 }) {
-                    Text("Cancel", color = TextPrimary)
-                }
-            }
-        )
-    }
-
-    // Import Dialog
-    if (showImportDialog) {
-        AlertDialog(
-            onDismissRequest = { showImportDialog = false },
-            title = { Text("Import Backup JSON") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Upload a backup JSON file or paste the exported JSON string below:", fontSize = 12.sp, color = TextMuted)
-                    
-                    Button(
-                        onClick = {
-                            filePickerLauncher.launch("application/json")
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal, contentColor = Color.Black),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text("Choose Backup JSON File", fontWeight = FontWeight.Bold)
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        HorizontalDivider(modifier = Modifier.weight(1f), color = DarkBorder, thickness = 0.5.dp)
-                        Text(" OR ", fontSize = 10.sp, color = TextMuted, modifier = Modifier.padding(horizontal = 8.dp))
-                        HorizontalDivider(modifier = Modifier.weight(1f), color = DarkBorder, thickness = 0.5.dp)
-                    }
-
-                    OutlinedTextField(
-                        value = importJsonText,
-                        onValueChange = { importJsonText = it },
-                        placeholder = { Text("Paste JSON string here...", color = TextMuted) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (importJsonText.isNotBlank()) {
-                            val success = viewModel.importBackupJson(importJsonText.trim())
-                            if (success) {
-                                Toast.makeText(context, "Data imported successfully!", Toast.LENGTH_SHORT).show()
-                                showImportDialog = false
-                                importJsonText = ""
-                            } else {
-                                Toast.makeText(context, "Failed to parse JSON. Please verify.", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                ) {
-                    Text("Import", color = PrimaryPurple)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showImportDialog = false }) {
                     Text("Cancel", color = TextPrimary)
                 }
             }
@@ -1038,17 +927,6 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                                     fontSize = 12.sp
                                 )
                             }
-                            if (wStones > 0) {
-                                Button(
-                                    onClick = { viewModel.useStone(index, "weapon") },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333343)),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                    modifier = Modifier.height(28.dp),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text("-1 Weapon Stone", fontSize = 11.sp, color = WeaponPink)
-                                }
-                            }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1083,17 +961,6 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                                     color = TextMuted,
                                     fontSize = 12.sp
                                 )
-                            }
-                            if (aStones > 0) {
-                                Button(
-                                    onClick = { viewModel.useStone(index, "armor") },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333343)),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                    modifier = Modifier.height(28.dp),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text("-1 Armor Stone", fontSize = 11.sp, color = ArmorBlue)
-                                }
                             }
                         }
                     }
@@ -1178,227 +1045,9 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
             }
         }
 
-        // Google Cloud Sync Card
-        item {
-            val googleUserEmail by viewModel.googleUserEmail.collectAsState()
-            val lastCloudSyncTime by viewModel.lastCloudSyncTime.collectAsState()
-            val autoSyncToCloud by viewModel.autoSyncToCloud.collectAsState()
-            val isCloudSyncing by viewModel.isCloudSyncing.collectAsState()
-
-            val signInLauncher = rememberLauncherForActivityResult(
-                contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
-            ) { result ->
-                val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                try {
-                    val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
-                    viewModel.handleGoogleSignInResult(account)
-                    Toast.makeText(context, "Signed in successfully!", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    val details = if (e is com.google.android.gms.common.api.ApiException) {
-                        "ApiException code ${e.statusCode}: ${e.status.statusMessage ?: e.message}"
-                    } else {
-                        "${e.javaClass.simpleName}: ${e.message}"
-                    }
-                    Toast.makeText(context, "Sign-in failed: $details", Toast.LENGTH_LONG).show()
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                border = BorderStroke(1.dp, if (googleUserEmail != null) PrimaryPurple.copy(alpha = 0.5f) else DarkBorder)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Google Drive Cloud Backup",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryPurple
-                        )
-                        if (isCloudSyncing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = PrimaryPurple,
-                                strokeWidth = 2.dp
-                            )
-                        }
-                    }
-
-                    if (googleUserEmail == null) {
-                        Text(
-                            text = "Link your Google Account to back up characters and Star Force tracker history automatically to your personal Google Drive (AppData). This is private, completely free, and secure.",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Button(
-                            onClick = {
-                                signInLauncher.launch(viewModel.googleDriveSyncManager.getSignInIntent())
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = Color.Black),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text("Sign in with Google", fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        // User is signed in
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = "Logged in: $googleUserEmail",
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
-                                fontSize = 13.sp
-                            )
-                            Text(
-                                text = "Last Synced: ${lastCloudSyncTime ?: "Never"}",
-                                color = TextMuted,
-                                fontSize = 12.sp
-                            )
-                            
-                            Divider(color = DarkBorder, thickness = 0.5.dp)
-
-                            // Auto-Sync Toggle
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Auto-Sync Changes", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                                    Text("Upload backup instantly to Google Drive on changes", fontSize = 11.sp, color = TextMuted)
-                                }
-                                Switch(
-                                    checked = autoSyncToCloud,
-                                    onCheckedChange = { viewModel.setAutoSyncToCloud(it) },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = PrimaryPurple)
-                                )
-                            }
-
-                            Divider(color = DarkBorder, thickness = 0.5.dp)
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        viewModel.cloudBackupNow { success ->
-                                            if (success) {
-                                                Toast.makeText(context, "Cloud backup completed!", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                val errMsg = viewModel.syncErrorMessage.value ?: "Unknown backup error"
-                                                Toast.makeText(context, "Cloud backup failed: $errMsg", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal, contentColor = Color.Black),
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text("Backup Now", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                }
-
-                                Button(
-                                    onClick = {
-                                        viewModel.cloudRestoreNow { success ->
-                                            if (success) {
-                                                Toast.makeText(context, "Cloud restore completed!", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                val errMsg = viewModel.syncErrorMessage.value ?: "Unknown restore error"
-                                                Toast.makeText(context, "Cloud restore failed: $errMsg", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B4A66), contentColor = TextPrimary),
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text("Restore Now", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                }
-                            }
-
-                            Button(
-                                onClick = { viewModel.performGoogleSignOut() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0x1AFFFFFF), contentColor = BreakRed),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(4.dp),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {
-                                Text("Sign Out", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Data backup & restore card
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                border = BorderStroke(1.dp, DarkBorder)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Local Backups",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = SecondaryTeal
-                    )
-                    Text(
-                        text = "Export your character backup data as JSON text to your clipboard or import saved JSON backup text.",
-                        color = TextMuted,
-                        fontSize = 12.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                val jsonStr = viewModel.exportBackupJson()
-                                if (jsonStr.isNotBlank()) {
-                                    clipboardManager.setText(AnnotatedString(jsonStr))
-                                    Toast.makeText(context, "Backup copied to clipboard!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "No character data found to export.", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal, contentColor = Color.Black),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Export JSON", fontWeight = FontWeight.Bold)
-                        }
-
-                        Button(
-                            onClick = {
-                                importJsonText = ""
-                                showImportDialog = true
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C3D52), contentColor = TextPrimary),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Import JSON", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
+        item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+}
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
     }
@@ -1409,11 +1058,10 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
     val characters by viewModel.characters.collectAsState()
     val context = LocalContext.current
 
-    var weaponPiecesInput by remember { mutableStateOf("") }
-    var armorPiecesInput by remember { mutableStateOf("") }
-    var sharedPiecesInput by remember { mutableStateOf("") }
-
-    var jointCalcResult by remember { mutableStateOf<com.gcirl.msmhelper.data.StoneOptimizer.JointCalculatorResult?>(null) }
+    val weaponPiecesInput by viewModel.weaponPoolInput.collectAsState()
+    val armorPiecesInput by viewModel.armorPoolInput.collectAsState()
+    val sharedPiecesInput by viewModel.sharedPoolInput.collectAsState()
+    val jointCalcResult by viewModel.jointCalcResult.collectAsState()
 
     if (characters.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1461,7 +1109,7 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                     ) {
                         OutlinedTextField(
                             value = weaponPiecesInput,
-                            onValueChange = { weaponPiecesInput = it },
+                            onValueChange = { viewModel.setWeaponPoolInput(it) },
                             label = { Text("Weapon Pool", fontSize = 11.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -1474,7 +1122,7 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
 
                         OutlinedTextField(
                             value = armorPiecesInput,
-                            onValueChange = { armorPiecesInput = it },
+                            onValueChange = { viewModel.setArmorPoolInput(it) },
                             label = { Text("Armor Pool", fontSize = 11.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -1487,7 +1135,7 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
 
                         OutlinedTextField(
                             value = sharedPiecesInput,
-                            onValueChange = { sharedPiecesInput = it },
+                            onValueChange = { viewModel.setSharedPoolInput(it) },
                             label = { Text("Shared Pool", fontSize = 11.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -1504,7 +1152,7 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                             val wPool = weaponPiecesInput.toIntOrNull() ?: 0
                             val aPool = armorPiecesInput.toIntOrNull() ?: 0
                             val sPool = sharedPiecesInput.toIntOrNull() ?: 0
-                            jointCalcResult = viewModel.calculateJointOptimalDistribution(wPool, aPool, sPool)
+                            viewModel.setJointCalcResult(viewModel.calculateJointOptimalDistribution(wPool, aPool, sPool))
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = Color.Black),
                         modifier = Modifier.fillMaxWidth(),
@@ -1582,10 +1230,10 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                                         armorPool = aPool,
                                         sharedPool = sPool
                                     ) { leftoverW, leftoverA, leftoverS ->
-                                        weaponPiecesInput = if (leftoverW > 0) leftoverW.toString() else ""
-                                        armorPiecesInput = if (leftoverA > 0) leftoverA.toString() else ""
-                                        sharedPiecesInput = if (leftoverS > 0) leftoverS.toString() else ""
-                                        jointCalcResult = null
+                                        viewModel.setWeaponPoolInput(if (leftoverW > 0) leftoverW.toString() else "")
+                                        viewModel.setArmorPoolInput(if (leftoverA > 0) leftoverA.toString() else "")
+                                        viewModel.setSharedPoolInput(if (leftoverS > 0) leftoverS.toString() else "")
+                                        viewModel.setJointCalcResult(null)
                                         Toast.makeText(
                                             context,
                                             "Successfully crafted ${result.totalStonesCreated} stone(s)!",
@@ -1681,10 +1329,10 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                                                                 armorPool = aPool,
                                                                 sharedPool = sPool
                                                             ) { leftoverW, leftoverA, leftoverS ->
-                                                                weaponPiecesInput = if (leftoverW > 0) leftoverW.toString() else ""
-                                                                armorPiecesInput = if (leftoverA > 0) leftoverA.toString() else ""
-                                                                sharedPiecesInput = if (leftoverS > 0) leftoverS.toString() else ""
-                                                                jointCalcResult = null
+                                                                viewModel.setWeaponPoolInput(if (leftoverW > 0) leftoverW.toString() else "")
+                                                                viewModel.setArmorPoolInput(if (leftoverA > 0) leftoverA.toString() else "")
+                                                                viewModel.setSharedPoolInput(if (leftoverS > 0) leftoverS.toString() else "")
+                                                                viewModel.setJointCalcResult(null)
                                                                 Toast.makeText(
                                                                     context,
                                                                     "Successfully crafted ${row.stonesAdded} stone(s) for ${row.charName}!",
@@ -1777,10 +1425,10 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                                                                 armorPool = aPool,
                                                                 sharedPool = sPool
                                                             ) { leftoverW, leftoverA, leftoverS ->
-                                                                weaponPiecesInput = if (leftoverW > 0) leftoverW.toString() else ""
-                                                                armorPiecesInput = if (leftoverA > 0) leftoverA.toString() else ""
-                                                                sharedPiecesInput = if (leftoverS > 0) leftoverS.toString() else ""
-                                                                jointCalcResult = null
+                                                                viewModel.setWeaponPoolInput(if (leftoverW > 0) leftoverW.toString() else "")
+                                                                viewModel.setArmorPoolInput(if (leftoverA > 0) leftoverA.toString() else "")
+                                                                viewModel.setSharedPoolInput(if (leftoverS > 0) leftoverS.toString() else "")
+                                                                viewModel.setJointCalcResult(null)
                                                                 Toast.makeText(
                                                                     context,
                                                                     "Successfully crafted ${row.stonesAdded} stone(s) for ${row.charName}!",
@@ -1806,6 +1454,10 @@ fun StoneMaximizerTab(viewModel: MSMHelperViewModel) {
                 }
             }
         }
+
+        item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+}
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
     }
@@ -1903,14 +1555,13 @@ fun ReadyToCraftTab(viewModel: MSMHelperViewModel) {
                                     color = TextPrimary
                                 )
                                 val weaponStones = char.weapon / 150
-                                if (weaponStones > 0) {
-                                    Text(
-                                        text = "$weaponStones stone${if (weaponStones > 1) "s" else ""} ready!",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StarGold
-                                    )
-                                }
+                                Text(
+                                    text = if (weaponStones > 0) "$weaponStones stone${if (weaponStones > 1) "s" else ""} ready!" else "",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StarGold,
+                                    modifier = Modifier.height(18.dp)
+                                )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Button(
                                     onClick = {
@@ -1949,14 +1600,13 @@ fun ReadyToCraftTab(viewModel: MSMHelperViewModel) {
                                     color = TextPrimary
                                 )
                                 val armorStones = char.armor / 150
-                                if (armorStones > 0) {
-                                    Text(
-                                        text = "$armorStones stone${if (armorStones > 1) "s" else ""} ready!",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StarGold
-                                    )
-                                }
+                                Text(
+                                    text = if (armorStones > 0) "$armorStones stone${if (armorStones > 1) "s" else ""} ready!" else "",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StarGold,
+                                    modifier = Modifier.height(18.dp)
+                                )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Button(
                                     onClick = {
@@ -1983,6 +1633,372 @@ fun ReadyToCraftTab(viewModel: MSMHelperViewModel) {
                 }
             }
         }
+        item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+}
+
+@Composable
+fun BackupRestoreTab(viewModel: MSMHelperViewModel) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
+    var importJsonText by remember { mutableStateOf("") }
+    var showImportDialog by remember { mutableStateOf(false) }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val jsonText = inputStream?.bufferedReader()?.use { it.readText() }
+                if (jsonText != null) {
+                    val success = viewModel.importBackupJson(jsonText.trim())
+                    if (success) {
+                        Toast.makeText(context, "Data imported successfully!", Toast.LENGTH_SHORT).show()
+                        showImportDialog = false
+                    } else {
+                        Toast.makeText(context, "Failed to parse JSON file.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "Failed to read file.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val recoverableAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.cloudBackupNow()
+        }
+    }
+
+    val recoverableIntent by viewModel.recoverableAuthIntent.collectAsState()
+    LaunchedEffect(recoverableIntent) {
+        recoverableIntent?.let {
+            recoverableAuthLauncher.launch(it)
+            viewModel.clearRecoverableAuthIntent()
+        }
+    }
+
+    if (showImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = { Text("Import Backup JSON") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Upload a backup JSON file or paste the exported JSON string below:", fontSize = 12.sp, color = TextMuted)
+                    
+                    Button(
+                        onClick = {
+                            filePickerLauncher.launch("application/json")
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal, contentColor = Color.Black),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text("Choose Backup JSON File", fontWeight = FontWeight.Bold)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = DarkBorder, thickness = 0.5.dp)
+                        Text(" OR ", fontSize = 10.sp, color = TextMuted, modifier = Modifier.padding(horizontal = 8.dp))
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = DarkBorder, thickness = 0.5.dp)
+                    }
+
+                    OutlinedTextField(
+                        value = importJsonText,
+                        onValueChange = { importJsonText = it },
+                        placeholder = { Text("Paste JSON string here...", color = TextMuted) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (importJsonText.isNotBlank()) {
+                            val success = viewModel.importBackupJson(importJsonText.trim())
+                            if (success) {
+                                Toast.makeText(context, "Data imported successfully!", Toast.LENGTH_SHORT).show()
+                                showImportDialog = false
+                                importJsonText = ""
+                            } else {
+                                Toast.makeText(context, "Failed to parse JSON. Please verify.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Import", color = PrimaryPurple)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text("Cancel", color = TextPrimary)
+                }
+            }
+        )
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                border = BorderStroke(1.dp, DarkBorder)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Backup & Restore",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryPurple
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Manage your MSM Helper app data. Backups contain all characters, piece counts, and Necro tracker history.",
+                        color = TextMuted,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        // Google Cloud Sync Card
+        item {
+            val googleUserEmail by viewModel.googleUserEmail.collectAsState()
+            val lastCloudSyncTime by viewModel.lastCloudSyncTime.collectAsState()
+            val autoSyncToCloud by viewModel.autoSyncToCloud.collectAsState()
+            val isCloudSyncing by viewModel.isCloudSyncing.collectAsState()
+
+            val signInLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                try {
+                    val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
+                    viewModel.handleGoogleSignInResult(account)
+                    Toast.makeText(context, "Signed in successfully!", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    val details = if (e is com.google.android.gms.common.api.ApiException) {
+                        "ApiException code ${e.statusCode}: ${e.status.statusMessage ?: e.message}"
+                    } else {
+                        "${e.javaClass.simpleName}: ${e.message}"
+                    }
+                    Toast.makeText(context, "Sign-in failed: $details", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                border = BorderStroke(1.dp, if (googleUserEmail != null) PrimaryPurple.copy(alpha = 0.5f) else DarkBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Google Drive Cloud Backup",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryPurple
+                        )
+                        if (isCloudSyncing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = PrimaryPurple,
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+
+                    if (googleUserEmail == null) {
+                        Text(
+                            text = "Link your Google Account to back up characters and Necro tracker history automatically to your personal Google Drive (AppData). This is private, completely free, and secure.",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(
+                            onClick = {
+                                signInLauncher.launch(viewModel.googleDriveSyncManager.getSignInIntent())
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = Color.Black),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text("Sign in with Google", fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Logged in: $googleUserEmail",
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = "Last Synced: ${lastCloudSyncTime ?: "Never"}",
+                                color = TextMuted,
+                                fontSize = 12.sp
+                            )
+                            
+                            Divider(color = DarkBorder, thickness = 0.5.dp)
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Auto-Sync Changes", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                    Text("Upload backup instantly to Google Drive on changes", fontSize = 11.sp, color = TextMuted)
+                                }
+                                Switch(
+                                    checked = autoSyncToCloud,
+                                    onCheckedChange = { viewModel.setAutoSyncToCloud(it) },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = PrimaryPurple)
+                                )
+                            }
+
+                            Divider(color = DarkBorder, thickness = 0.5.dp)
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        viewModel.cloudBackupNow { success ->
+                                            if (success) {
+                                                Toast.makeText(context, "Cloud backup completed!", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                val errMsg = viewModel.syncErrorMessage.value ?: "Unknown backup error"
+                                                Toast.makeText(context, "Cloud backup failed: $errMsg", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal, contentColor = Color.Black),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text("Backup Now", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+
+                                Button(
+                                    onClick = {
+                                        viewModel.cloudRestoreNow { success ->
+                                            if (success) {
+                                                Toast.makeText(context, "Cloud restore completed!", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                val errMsg = viewModel.syncErrorMessage.value ?: "Unknown restore error"
+                                                Toast.makeText(context, "Cloud restore failed: $errMsg", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B4A66), contentColor = TextPrimary),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text("Restore Now", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+
+                            Button(
+                                onClick = { viewModel.performGoogleSignOut() },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0x1AFFFFFF), contentColor = BreakRed),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(4.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text("Sign Out", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Local Backups Card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                border = BorderStroke(1.dp, DarkBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Local Backups",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = SecondaryTeal
+                    )
+                    Text(
+                        text = "Export your app backup data as JSON text to your clipboard or import saved JSON backup text.",
+                        color = TextMuted,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                val jsonStr = viewModel.exportBackupJson()
+                                if (jsonStr.isNotBlank()) {
+                                    clipboardManager.setText(AnnotatedString(jsonStr))
+                                    Toast.makeText(context, "Backup copied to clipboard!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "No data found to export.", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SecondaryTeal, contentColor = Color.Black),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Export JSON", fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                importJsonText = ""
+                                showImportDialog = true
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C3D52), contentColor = TextPrimary),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Import JSON", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
         item { Spacer(modifier = Modifier.height(20.dp)) }
     }
 }
