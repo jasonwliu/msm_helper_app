@@ -1857,7 +1857,7 @@ fun BackupRestoreTab(viewModel: MSMHelperViewModel) {
                                 fontSize = 12.sp
                             )
                             
-                            Divider(color = DarkBorder, thickness = 0.5.dp)
+                            HorizontalDivider(color = DarkBorder, thickness = 0.5.dp)
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1875,7 +1875,7 @@ fun BackupRestoreTab(viewModel: MSMHelperViewModel) {
                                 )
                             }
 
-                            Divider(color = DarkBorder, thickness = 0.5.dp)
+                            HorizontalDivider(color = DarkBorder, thickness = 0.5.dp)
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
