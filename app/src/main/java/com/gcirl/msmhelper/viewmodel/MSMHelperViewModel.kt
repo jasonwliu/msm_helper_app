@@ -609,6 +609,16 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         _characters.value = chars
         _necroHistory.value = history.drop(1)
 
+        // Revert active character index if this was a drop addition
+        if (lastAction.actionType == "add_drop") {
+            lastAction.affected.firstOrNull()?.let { affectedChar ->
+                val idx = chars.indexOfFirst { it.name == affectedChar.charName }
+                if (idx != -1) {
+                    _activeCharIndex.value = idx
+                }
+            }
+        }
+
         // Restore pool values if present in the history item
         _weaponPoolInput.value = lastAction.oldWeaponPool
         _armorPoolInput.value = lastAction.oldArmorPool
