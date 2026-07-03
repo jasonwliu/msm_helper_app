@@ -82,25 +82,23 @@ fun MastercraftTrackerScreen(viewModel: MSMHelperViewModel) {
         }
     }
 
-    // Toggle lucky scrolls
-    fun toggleScroll(percent: Int) {
+    // Add lucky scroll
+    fun addScroll(percent: Int) {
         if (isScrollMultiSelect) {
-            if (selectedScrolls.contains(percent)) {
-                selectedScrolls = selectedScrolls.filter { it != percent }
-            } else {
-                if (selectedScrolls.size >= 2) {
-                    // Keep the newest, discard the oldest to enforce max 2
-                    selectedScrolls = listOf(selectedScrolls.last(), percent)
-                } else {
-                    selectedScrolls = selectedScrolls + percent
-                }
+            if (selectedScrolls.size < 2) {
+                selectedScrolls = selectedScrolls + percent
             }
         } else {
-            // Single-select: toggle selection
-            selectedScrolls = if (selectedScrolls.contains(percent)) {
-                emptyList()
-            } else {
-                listOf(percent)
+            // Single-select
+            selectedScrolls = listOf(percent)
+        }
+    }
+
+    // Remove lucky scroll (decrements count by 1)
+    fun removeScroll(percent: Int) {
+        if (selectedScrolls.contains(percent)) {
+            selectedScrolls = selectedScrolls.toMutableList().apply {
+                remove(percent)
             }
         }
     }
@@ -216,20 +214,15 @@ fun MastercraftTrackerScreen(viewModel: MSMHelperViewModel) {
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             scrollOptions.forEach { value ->
-                                val active = selectedScrolls.contains(value)
-                                Button(
-                                    onClick = { toggleScroll(value) },
+                                ScrollItemButton(
+                                    value = value,
+                                    selectedScrolls = selectedScrolls,
+                                    isMultiSelect = isScrollMultiSelect,
+                                    onAdd = { addScroll(it) },
+                                    onRemove = { removeScroll(it) },
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (active) SecondaryTeal else DarkSurfaceVariant,
-                                        contentColor = if (active) Color.Black else TextPrimary
-                                    ),
-                                    shape = RoundedCornerShape(4.dp),
-                                    border = BorderStroke(1.dp, if (active) SecondaryTeal else DarkBorder),
-                                    contentPadding = PaddingValues(vertical = 8.dp)
-                                ) {
-                                    Text("+$value% Scroll", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                }
+                                    compact = false
+                                )
                             }
                         }
                     }
@@ -525,20 +518,15 @@ fun MastercraftTrackerScreen(viewModel: MSMHelperViewModel) {
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     chunk.forEach { value ->
-                                        val active = selectedScrolls.contains(value)
-                                        Button(
-                                            onClick = { toggleScroll(value) },
+                                        ScrollItemButton(
+                                            value = value,
+                                            selectedScrolls = selectedScrolls,
+                                            isMultiSelect = isScrollMultiSelect,
+                                            onAdd = { addScroll(it) },
+                                            onRemove = { removeScroll(it) },
                                             modifier = Modifier.weight(1f),
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (active) SecondaryTeal else DarkSurfaceVariant,
-                                                contentColor = if (active) Color.Black else TextPrimary
-                                            ),
-                                            shape = RoundedCornerShape(4.dp),
-                                            border = BorderStroke(1.dp, if (active) SecondaryTeal else DarkBorder),
-                                            contentPadding = PaddingValues(vertical = 4.dp)
-                                        ) {
-                                            Text("+$value%", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                        }
+                                            compact = true
+                                        )
                                     }
                                     // Pad empty spaces in row
                                     if (chunk.size < 3) {
@@ -704,6 +692,94 @@ fun MastercraftTrackerScreen(viewModel: MSMHelperViewModel) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ScrollItemButton(
+    value: Int,
+    selectedScrolls: List<Int>,
+    isMultiSelect: Boolean,
+    onAdd: (Int) -> Unit,
+    onRemove: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
+) {
+    val count = selectedScrolls.count { it == value }
+    val totalCount = selectedScrolls.size
+    val isSelected = count > 0
+
+    if (isMultiSelect && isSelected) {
+        Surface(
+            modifier = modifier.height(if (compact) 32.dp else 40.dp),
+            color = SecondaryTeal,
+            contentColor = Color.Black,
+            shape = RoundedCornerShape(4.dp),
+            border = BorderStroke(1.dp, SecondaryTeal)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Minus button
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                        .clickable { onRemove(value) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("-", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
+                }
+
+                // Center label
+                val label = if (compact) "+$value%\n(x$count)" else "+$value% Scroll (x$count)"
+                Text(
+                    text = label,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = if (compact) 10.sp else 12.sp,
+                    color = Color.Black,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.weight(2.5f)
+                )
+
+                // Plus button
+                val canAddMore = totalCount < 2
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                        .alpha(if (canAddMore) 1f else 0.3f)
+                        .clickable(enabled = canAddMore) { onAdd(value) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("+", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
+                }
+            }
+        }
+    } else {
+        val active = count > 0
+        Button(
+            onClick = {
+                if (active) {
+                    onRemove(value)
+                } else {
+                    onAdd(value)
+                }
+            },
+            modifier = modifier.height(if (compact) 32.dp else 40.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (active) SecondaryTeal else DarkSurfaceVariant,
+                contentColor = if (active) Color.Black else TextPrimary
+            ),
+            shape = RoundedCornerShape(4.dp),
+            border = BorderStroke(1.dp, if (active) SecondaryTeal else DarkBorder),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            val label = if (compact) "+$value%" else "+$value% Scroll"
+            Text(label, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 }
