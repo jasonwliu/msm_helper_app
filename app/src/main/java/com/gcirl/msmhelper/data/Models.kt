@@ -30,8 +30,19 @@ data class NecroAction(
 )
 
 @Serializable
+data class MastercraftAttempt(
+    val timestamp: String,
+    val gearType: String, // "necro", "inherit", "chaos", "absolab", "arcane"
+    val isRefined: Boolean,
+    val luckyScrolls: List<Int> = emptyList(),
+    val totalRate: Int,
+    val isSuccess: Boolean
+)
+
+@Serializable
 data class MSMAppState(
     val characters: List<Character> = emptyList(),
     val activeCharIndex: Int = 0,
-    val necroHistory: List<NecroAction> = emptyList()
+    val necroHistory: List<NecroAction> = emptyList(),
+    val mastercraftHistory: List<MastercraftAttempt> = emptyList()
 )

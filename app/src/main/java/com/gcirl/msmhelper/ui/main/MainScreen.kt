@@ -22,6 +22,8 @@ import com.gcirl.msmhelper.ui.screens.StoneMaximizerTab
 import com.gcirl.msmhelper.ui.screens.NecroTrackerStatsScreen
 import com.gcirl.msmhelper.ui.screens.ReadyToCraftTab
 import com.gcirl.msmhelper.ui.screens.BackupRestoreTab
+import com.gcirl.msmhelper.ui.screens.MastercraftTrackerScreen
+import com.gcirl.msmhelper.ui.screens.MastercraftStatsScreen
 import com.gcirl.msmhelper.viewmodel.MSMHelperViewModel
 import kotlinx.coroutines.launch
 
@@ -39,6 +41,7 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val necroHistory by viewModel.necroHistory.collectAsState()
+    val mastercraftHistory by viewModel.mastercraftHistory.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -174,12 +177,56 @@ fun MainScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Item 5: Backup & Restore
+                // Item 5: Mastercraft Tracker
                 NavigationDrawerItem(
-                    label = { Text("Backup & Restore", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Mastercraft Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
                     selected = selectedTab == 5,
                     onClick = {
                         selectedTab = 5
+                        scope.launch { drawerState.close() }
+                    },
+                    icon = { Text("⚔️", fontSize = 20.sp) },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = Color(0x22C59BFF),
+                        selectedIconColor = PrimaryPurple,
+                        selectedTextColor = PrimaryPurple,
+                        unselectedContainerColor = Color.Transparent,
+                        unselectedIconColor = TextMuted,
+                        unselectedTextColor = TextMuted
+                    ),
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Item 6: Mastercraft Stats
+                NavigationDrawerItem(
+                    label = { Text("Mastercraft Stats", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                    selected = selectedTab == 6,
+                    onClick = {
+                        selectedTab = 6
+                        scope.launch { drawerState.close() }
+                    },
+                    icon = { Text("📈", fontSize = 20.sp) },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = Color(0x22C59BFF),
+                        selectedIconColor = PrimaryPurple,
+                        selectedTextColor = PrimaryPurple,
+                        unselectedContainerColor = Color.Transparent,
+                        unselectedIconColor = TextMuted,
+                        unselectedTextColor = TextMuted
+                    ),
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Item 7: Backup & Restore
+                NavigationDrawerItem(
+                    label = { Text("Backup & Restore", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                    selected = selectedTab == 7,
+                    onClick = {
+                        selectedTab = 7
                         scope.launch { drawerState.close() }
                     },
                     icon = { Text("💾", fontSize = 20.sp) },
@@ -208,6 +255,8 @@ fun MainScreen(
                                 2 -> "Ready to Craft"
                                 3 -> "Stone Maximizer"
                                 4 -> "Necro Tracker"
+                                5 -> "Mastercraft Tracker"
+                                6 -> "Mastercraft Stats"
                                 else -> "Backup & Restore"
                             },
                             fontWeight = FontWeight.Bold,
@@ -225,9 +274,15 @@ fun MainScreen(
                         }
                     },
                     actions = {
-                        if (necroHistory.isNotEmpty()) {
+                        val isMastercraftTab = selectedTab == 5 || selectedTab == 6
+                        val hasHistory = if (isMastercraftTab) mastercraftHistory.isNotEmpty() else necroHistory.isNotEmpty()
+                        if (hasHistory) {
                             IconButton(onClick = {
-                                val msg = viewModel.undoLastNecroAction()
+                                val msg = if (isMastercraftTab) {
+                                    viewModel.undoLastMastercraftAttempt()
+                                } else {
+                                    viewModel.undoLastNecroAction()
+                                }
                                 if (msg != null) {
                                     android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
                                 }
@@ -258,7 +313,9 @@ fun MainScreen(
                     2 -> ReadyToCraftTab(viewModel = viewModel)
                     3 -> StoneMaximizerTab(viewModel = viewModel)
                     4 -> NecroTrackerStatsScreen(viewModel = viewModel)
-                    5 -> BackupRestoreTab(viewModel = viewModel)
+                    5 -> MastercraftTrackerScreen(viewModel = viewModel)
+                    6 -> MastercraftStatsScreen(viewModel = viewModel)
+                    7 -> BackupRestoreTab(viewModel = viewModel)
                 }
             }
         }

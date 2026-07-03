@@ -32,6 +32,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     private val _necroHistory = MutableStateFlow<List<NecroAction>>(emptyList())
     val necroHistory: StateFlow<List<NecroAction>> = _necroHistory.asStateFlow()
 
+    private val _mastercraftHistory = MutableStateFlow<List<MastercraftAttempt>>(emptyList())
+    val mastercraftHistory: StateFlow<List<MastercraftAttempt>> = _mastercraftHistory.asStateFlow()
+
     // Persistent calculator pool inputs
     private val _weaponPoolInput = MutableStateFlow("")
     val weaponPoolInput = _weaponPoolInput.asStateFlow()
@@ -104,7 +107,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         val state = MSMAppState(
             characters = _characters.value,
             activeCharIndex = _activeCharIndex.value,
-            necroHistory = _necroHistory.value
+            necroHistory = _necroHistory.value,
+            mastercraftHistory = _mastercraftHistory.value
         )
         try {
             val jsonStr = jsonParser.encodeToString(state)
@@ -147,6 +151,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 _characters.value = state.characters
                 _activeCharIndex.value = state.activeCharIndex
                 _necroHistory.value = state.necroHistory
+                _mastercraftHistory.value = state.mastercraftHistory
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -254,7 +259,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         val state = MSMAppState(
             characters = _characters.value,
             activeCharIndex = _activeCharIndex.value,
-            necroHistory = _necroHistory.value
+            necroHistory = _necroHistory.value,
+            mastercraftHistory = _mastercraftHistory.value
         )
         return try {
             jsonParser.encodeToString(state)
@@ -271,6 +277,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             _characters.value = state.characters
             _activeCharIndex.value = state.activeCharIndex
             _necroHistory.value = state.necroHistory
+            _mastercraftHistory.value = state.mastercraftHistory
             saveData()
             true
         } catch (e1: Exception) {
@@ -280,6 +287,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 _characters.value = charactersList
                 _activeCharIndex.value = 0
                 _necroHistory.value = emptyList()
+                _mastercraftHistory.value = emptyList()
                 saveData()
                 true
             } catch (e2: Exception) {
@@ -640,6 +648,44 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun clearNecroHistory() {
         _necroHistory.value = emptyList()
+        saveData()
+    }
+
+    fun logMastercraftAttempt(
+        gearType: String,
+        isRefined: Boolean,
+        luckyScrolls: List<Int>,
+        totalRate: Int,
+        isSuccess: Boolean
+    ) {
+        val timeStamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val attempt = MastercraftAttempt(
+            timestamp = timeStamp,
+            gearType = gearType,
+            isRefined = isRefined,
+            luckyScrolls = luckyScrolls,
+            totalRate = totalRate,
+            isSuccess = isSuccess
+        )
+        _mastercraftHistory.value = listOf(attempt) + _mastercraftHistory.value
+        saveData()
+    }
+
+    fun undoLastMastercraftAttempt(): String? {
+        val history = _mastercraftHistory.value
+        if (history.isEmpty()) return null
+
+        val lastAttempt = history.first()
+        _mastercraftHistory.value = history.drop(1)
+        saveData()
+
+        val outcome = if (lastAttempt.isSuccess) "Success" else "Failure"
+        val gearFormatted = lastAttempt.gearType.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+        return "Undid $gearFormatted Mastercraft $outcome"
+    }
+
+    fun clearMastercraftHistory() {
+        _mastercraftHistory.value = emptyList()
         saveData()
     }
 }

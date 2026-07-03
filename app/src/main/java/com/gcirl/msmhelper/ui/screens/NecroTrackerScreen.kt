@@ -316,7 +316,7 @@ fun DailyTrackerTab(
                 }
             }
 
-            // Right Half: Piece selections & Actions
+            // Column 2: Piece selections
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
@@ -421,12 +421,51 @@ fun DailyTrackerTab(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
 
+            // Column 3: The add or skip buttons
+            LazyColumn(
+                modifier = Modifier
+                    .weight(0.9f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                        border = BorderStroke(1.dp, DarkBorder)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Text(
+                                text = "COMMIT DROP",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
+                                letterSpacing = 1.sp
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Action buttons
                             val total = currentBase + currentCluster
                             val hasPiecesSelected = total > 0
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Total to Add", color = TextPrimary, fontSize = 13.sp)
+                                Text("+$total Pieces", color = if (hasPiecesSelected) PrimaryPurple else TextMuted, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
                             Button(
                                 onClick = { viewModel.commitDrop() },
                                 modifier = Modifier.fillMaxWidth(),
