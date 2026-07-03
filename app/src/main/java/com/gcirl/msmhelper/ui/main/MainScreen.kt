@@ -2,6 +2,8 @@ package com.gcirl.msmhelper.ui.main
 
 import android.app.Application
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -50,7 +52,13 @@ fun MainScreen(
                 drawerContainerColor = DarkSurface,
                 drawerContentColor = TextPrimary
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 24.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = "MSM HELPER",
                     style = MaterialTheme.typography.titleLarge,
@@ -240,6 +248,7 @@ fun MainScreen(
                     ),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
+                }
             }
         }
     ) {
