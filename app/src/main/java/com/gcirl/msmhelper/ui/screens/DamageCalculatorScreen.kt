@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -431,7 +432,8 @@ fun DamageCalculatorScreen(
                                             unfocusedTextColor = TextPrimary,
                                             focusedBorderColor = PrimaryPurple,
                                             unfocusedBorderColor = DarkBorder,
-                                            containerColor = DarkSurfaceVariant
+                                            focusedContainerColor = DarkSurfaceVariant,
+                                            unfocusedContainerColor = DarkSurfaceVariant
                                         ),
                                         singleLine = true
                                     )
@@ -603,7 +605,8 @@ fun DamageCalculatorScreen(
                                                 unfocusedTextColor = TextPrimary,
                                                 focusedBorderColor = SecondaryTeal,
                                                 unfocusedBorderColor = DarkBorder,
-                                                containerColor = DarkSurfaceVariant
+                                                focusedContainerColor = DarkSurfaceVariant,
+                                                unfocusedContainerColor = DarkSurfaceVariant
                                             ),
                                             singleLine = true
                                         )
@@ -824,7 +827,8 @@ fun DamageCalculatorScreen(
                                         unfocusedTextColor = TextPrimary,
                                         focusedBorderColor = PrimaryPurple,
                                         unfocusedBorderColor = DarkBorder,
-                                        containerColor = DarkSurfaceVariant
+                                        focusedContainerColor = DarkSurfaceVariant,
+                                        unfocusedContainerColor = DarkSurfaceVariant
                                     ),
                                     singleLine = true
                                 )
@@ -901,7 +905,8 @@ fun DamageCalculatorScreen(
                                             unfocusedTextColor = TextPrimary,
                                             focusedBorderColor = SecondaryTeal,
                                             unfocusedBorderColor = DarkBorder,
-                                            containerColor = DarkSurfaceVariant
+                                            focusedContainerColor = DarkSurfaceVariant,
+                                            unfocusedContainerColor = DarkSurfaceVariant
                                         ),
                                         singleLine = true
                                     )
