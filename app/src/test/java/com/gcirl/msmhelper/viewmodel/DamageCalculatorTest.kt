@@ -27,7 +27,7 @@ class DamageCalculatorTest {
         val critPotential = nonCritPotential * (1.0 + (critDmg / 100.0) + 0.2)
 
         val iedFactor = (1.0 - (ied / 100.0)) * 0.85
-        val iedTerm = Math.floor(iedFactor * 1000.0) / 1000.0
+        val iedTerm = Math.floor(iedFactor * 1000.0 + 1e-9) / 1000.0
         val defMult = (1.0 - (defense / 100.0) * iedTerm).coerceAtLeast(0.0)
 
         val nonCritDefPotential = nonCritPotential * defMult

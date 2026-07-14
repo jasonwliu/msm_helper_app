@@ -94,7 +94,7 @@ fun DamageCalculatorScreen(
         // Boss defense & IED term:
         // DefenseMultiplier = 1 - Boss Defense * (Floor((1 - IED) * (1 - 0.15) * 1000)) / 1000
         val iedFactor = (1.0 - (ied / 100.0)) * 0.85
-        val iedTerm = Math.floor(iedFactor * 1000.0) / 1000.0
+        val iedTerm = Math.floor(iedFactor * 1000.0 + 1e-9) / 1000.0
         val defMult = (1.0 - (defense / 100.0) * iedTerm).coerceAtLeast(0.0)
 
         val nonCritDefPotential = nonCritPotential * defMult
