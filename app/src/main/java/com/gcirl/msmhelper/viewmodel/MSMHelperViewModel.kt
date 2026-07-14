@@ -35,6 +35,15 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     private val _mastercraftHistory = MutableStateFlow<List<MastercraftAttempt>>(emptyList())
     val mastercraftHistory: StateFlow<List<MastercraftAttempt>> = _mastercraftHistory.asStateFlow()
 
+    private val _bossAccessoryHistory = MutableStateFlow<List<BossAccessoryAttempt>>(emptyList())
+    val bossAccessoryHistory: StateFlow<List<BossAccessoryAttempt>> = _bossAccessoryHistory.asStateFlow()
+
+    private val _calcPresets = MutableStateFlow<List<CalcPreset>>(listOf(CalcPreset(name = "Default Preset")))
+    val calcPresets: StateFlow<List<CalcPreset>> = _calcPresets.asStateFlow()
+
+    private val _activePresetIndex = MutableStateFlow(0)
+    val activePresetIndex: StateFlow<Int> = _activePresetIndex.asStateFlow()
+
     // Persistent calculator pool inputs
     private val _weaponPoolInput = MutableStateFlow("")
     val weaponPoolInput = _weaponPoolInput.asStateFlow()
@@ -108,7 +117,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             characters = _characters.value,
             activeCharIndex = _activeCharIndex.value,
             necroHistory = _necroHistory.value,
-            mastercraftHistory = _mastercraftHistory.value
+            mastercraftHistory = _mastercraftHistory.value,
+            bossAccessoryHistory = _bossAccessoryHistory.value,
+            calcPresets = _calcPresets.value,
+            activePresetIndex = _activePresetIndex.value
         )
         try {
             val jsonStr = jsonParser.encodeToString(state)
@@ -152,6 +164,13 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 _activeCharIndex.value = state.activeCharIndex
                 _necroHistory.value = state.necroHistory
                 _mastercraftHistory.value = state.mastercraftHistory
+                _bossAccessoryHistory.value = state.bossAccessoryHistory
+                _calcPresets.value = if (state.calcPresets.isEmpty()) {
+                    listOf(CalcPreset(name = "Default Preset"))
+                } else {
+                    state.calcPresets
+                }
+                _activePresetIndex.value = state.activePresetIndex
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -260,7 +279,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             characters = _characters.value,
             activeCharIndex = _activeCharIndex.value,
             necroHistory = _necroHistory.value,
-            mastercraftHistory = _mastercraftHistory.value
+            mastercraftHistory = _mastercraftHistory.value,
+            bossAccessoryHistory = _bossAccessoryHistory.value,
+            calcPresets = _calcPresets.value,
+            activePresetIndex = _activePresetIndex.value
         )
         return try {
             jsonParser.encodeToString(state)
@@ -278,6 +300,13 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             _activeCharIndex.value = state.activeCharIndex
             _necroHistory.value = state.necroHistory
             _mastercraftHistory.value = state.mastercraftHistory
+            _bossAccessoryHistory.value = state.bossAccessoryHistory
+            _calcPresets.value = if (state.calcPresets.isEmpty()) {
+                listOf(CalcPreset(name = "Default Preset"))
+            } else {
+                state.calcPresets
+            }
+            _activePresetIndex.value = state.activePresetIndex
             saveData()
             true
         } catch (e1: Exception) {
@@ -288,6 +317,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 _activeCharIndex.value = 0
                 _necroHistory.value = emptyList()
                 _mastercraftHistory.value = emptyList()
+                _bossAccessoryHistory.value = emptyList()
+                _calcPresets.value = listOf(CalcPreset(name = "Default Preset"))
+                _activePresetIndex.value = 0
                 saveData()
                 true
             } catch (e2: Exception) {
@@ -687,5 +719,92 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     fun clearMastercraftHistory() {
         _mastercraftHistory.value = emptyList()
         saveData()
+    }
+
+    // --- Boss Accessory Actions ---
+    fun logBossAccessoryAttempt(isSuccess: Boolean) {
+        val timeStamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val attempt = BossAccessoryAttempt(timestamp = timeStamp, isSuccess = isSuccess)
+        _bossAccessoryHistory.value = listOf(attempt) + _bossAccessoryHistory.value
+        saveData()
+    }
+
+    fun undoLastBossAccessoryAttempt(): String? {
+        val history = _bossAccessoryHistory.value
+        if (history.isEmpty()) return null
+
+        val lastAttempt = history.first()
+        _bossAccessoryHistory.value = history.drop(1)
+        saveData()
+
+        val outcome = if (lastAttempt.isSuccess) "Drop" else "No Drop"
+        return "Undid Boss Accessory $outcome"
+    }
+
+    fun clearBossAccessoryHistory() {
+        _bossAccessoryHistory.value = emptyList()
+        saveData()
+    }
+
+    // --- Calculator Preset Actions ---
+    fun addCalcPreset(name: String) {
+        val currentPreset = _calcPresets.value.getOrNull(_activePresetIndex.value) ?: CalcPreset(name = name)
+        val newPreset = currentPreset.copy(name = name)
+        val updatedList = _calcPresets.value + newPreset
+        _calcPresets.value = updatedList
+        _activePresetIndex.value = updatedList.lastIndex
+        saveData()
+    }
+
+    fun renameActivePreset(newName: String) {
+        val list = _calcPresets.value.toMutableList()
+        val index = _activePresetIndex.value
+        if (index in list.indices) {
+            list[index] = list[index].copy(name = newName)
+            _calcPresets.value = list
+            saveData()
+        }
+    }
+
+    fun updateActivePreset(preset: CalcPreset) {
+        val list = _calcPresets.value.toMutableList()
+        val index = _activePresetIndex.value
+        if (index in list.indices) {
+            list[index] = preset
+            _calcPresets.value = list
+            saveData()
+        }
+    }
+
+    fun deleteActivePreset() {
+        val list = _calcPresets.value.toMutableList()
+        val index = _activePresetIndex.value
+        if (index in list.indices) {
+            list.removeAt(index)
+            if (list.isEmpty()) {
+                list.add(CalcPreset(name = "Default Preset"))
+            }
+            _calcPresets.value = list
+            _activePresetIndex.value = (index - 1).coerceAtLeast(0)
+            saveData()
+        }
+    }
+
+    fun setActivePresetIndex(index: Int) {
+        if (index in _calcPresets.value.indices) {
+            _activePresetIndex.value = index
+            saveData()
+        }
+    }
+
+    // --- Mastercraft History Logging Actions ---
+    fun deleteMastercraftAttempt(timestamp: String) {
+        val history = _mastercraftHistory.value.toMutableList()
+        val index = history.indexOfFirst { it.timestamp == timestamp }
+        if (index != -1) {
+            history.removeAt(index)
+            _mastercraftHistory.value = history
+            saveData()
+        }
     }
 }

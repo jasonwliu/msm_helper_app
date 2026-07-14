@@ -26,6 +26,8 @@ import com.gcirl.msmhelper.ui.screens.ReadyToCraftTab
 import com.gcirl.msmhelper.ui.screens.BackupRestoreTab
 import com.gcirl.msmhelper.ui.screens.MastercraftTrackerScreen
 import com.gcirl.msmhelper.ui.screens.MastercraftStatsScreen
+import com.gcirl.msmhelper.ui.screens.BossAccessoryScreen
+import com.gcirl.msmhelper.ui.screens.DamageCalculatorScreen
 import com.gcirl.msmhelper.viewmodel.MSMHelperViewModel
 import kotlinx.coroutines.launch
 
@@ -44,6 +46,7 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     val necroHistory by viewModel.necroHistory.collectAsState()
     val mastercraftHistory by viewModel.mastercraftHistory.collectAsState()
+    val bossAccessoryHistory by viewModel.bossAccessoryHistory.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -59,195 +62,285 @@ fun MainScreen(
                         .padding(bottom = 24.dp)
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "MSM HELPER",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = PrimaryPurple,
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp)
-                )
-                Text(
-                    text = "Tools & Utilities Menu",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted,
-                    modifier = Modifier.padding(horizontal = 28.dp).padding(bottom = 20.dp)
-                )
-                HorizontalDivider(color = DarkBorder, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
-                Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "MSM HELPER",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = PrimaryPurple,
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp)
+                    )
+                    Text(
+                        text = "Tools & Utilities Menu",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted,
+                        modifier = Modifier.padding(horizontal = 28.dp).padding(bottom = 20.dp)
+                    )
+                    HorizontalDivider(color = DarkBorder, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Item 0: Daily Tracker
-                NavigationDrawerItem(
-                    label = { Text("Daily Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
-                    selected = selectedTab == 0,
-                    onClick = {
-                        selectedTab = 0
-                        scope.launch { drawerState.close() }
-                    },
-                    icon = { Text("💎", fontSize = 20.sp) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Color(0x22C59BFF),
-                        selectedIconColor = PrimaryPurple,
-                        selectedTextColor = PrimaryPurple,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                    // --- NECRO CATEGORY ---
+                    Text(
+                        text = "NECRO CRYSTALS & STONES",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryPurple,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 10.dp)
+                    )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    // Item 0: Daily Tracker
+                    NavigationDrawerItem(
+                        label = { Text("Daily Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 0,
+                        onClick = {
+                            selectedTab = 0
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("💎", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
 
-                // Item 1: Character Overview
-                NavigationDrawerItem(
-                    label = { Text("Character Overview", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
-                    selected = selectedTab == 1,
-                    onClick = {
-                        selectedTab = 1
-                        scope.launch { drawerState.close() }
-                    },
-                    icon = { Text("👥", fontSize = 20.sp) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Color(0x22C59BFF),
-                        selectedIconColor = PrimaryPurple,
-                        selectedTextColor = PrimaryPurple,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    // Item 1: Character Overview
+                    NavigationDrawerItem(
+                        label = { Text("Character Overview", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 1,
+                        onClick = {
+                            selectedTab = 1
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("👥", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
 
-                // Item 2: Ready to Craft
-                NavigationDrawerItem(
-                    label = { Text("Ready to Craft", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
-                    selected = selectedTab == 2,
-                    onClick = {
-                        selectedTab = 2
-                        scope.launch { drawerState.close() }
-                    },
-                    icon = { Text("🛠️", fontSize = 20.sp) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Color(0x22C59BFF),
-                        selectedIconColor = PrimaryPurple,
-                        selectedTextColor = PrimaryPurple,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    // Item 2: Ready to Craft
+                    NavigationDrawerItem(
+                        label = { Text("Ready to Craft", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 2,
+                        onClick = {
+                            selectedTab = 2
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("🛠️", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
 
-                // Item 3: Stone Maximizer
-                NavigationDrawerItem(
-                    label = { Text("Stone Maximizer", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
-                    selected = selectedTab == 3,
-                    onClick = {
-                        selectedTab = 3
-                        scope.launch { drawerState.close() }
-                    },
-                    icon = { Text("🧮", fontSize = 20.sp) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Color(0x22C59BFF),
-                        selectedIconColor = PrimaryPurple,
-                        selectedTextColor = PrimaryPurple,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    // Item 3: Stone Maximizer
+                    NavigationDrawerItem(
+                        label = { Text("Stone Maximizer", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 3,
+                        onClick = {
+                            selectedTab = 3
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("🧮", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
 
-                // Item 4: Necro Tracker
-                NavigationDrawerItem(
-                    label = { Text("Necro Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
-                    selected = selectedTab == 4,
-                    onClick = {
-                        selectedTab = 4
-                        scope.launch { drawerState.close() }
-                    },
-                    icon = { Text("📊", fontSize = 20.sp) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Color(0x22C59BFF),
-                        selectedIconColor = PrimaryPurple,
-                        selectedTextColor = PrimaryPurple,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    // Item 4: Necro Tracker
+                    NavigationDrawerItem(
+                        label = { Text("Necro Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 4,
+                        onClick = {
+                            selectedTab = 4
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("📊", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
 
-                // Item 5: Mastercraft Tracker
-                NavigationDrawerItem(
-                    label = { Text("Mastercraft Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
-                    selected = selectedTab == 5,
-                    onClick = {
-                        selectedTab = 5
-                        scope.launch { drawerState.close() }
-                    },
-                    icon = { Text("⚔️", fontSize = 20.sp) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Color(0x22C59BFF),
-                        selectedIconColor = PrimaryPurple,
-                        selectedTextColor = PrimaryPurple,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = DarkBorder, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    // --- MASTERCRAFTING CATEGORY ---
+                    Text(
+                        text = "MASTERCRAFTING",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryPurple,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 10.dp)
+                    )
 
-                // Item 6: Mastercraft Stats
-                NavigationDrawerItem(
-                    label = { Text("Mastercraft Stats", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
-                    selected = selectedTab == 6,
-                    onClick = {
-                        selectedTab = 6
-                        scope.launch { drawerState.close() }
-                    },
-                    icon = { Text("📈", fontSize = 20.sp) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Color(0x22C59BFF),
-                        selectedIconColor = PrimaryPurple,
-                        selectedTextColor = PrimaryPurple,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                    // Item 5: Mastercraft Tracker
+                    NavigationDrawerItem(
+                        label = { Text("Mastercraft Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 5,
+                        onClick = {
+                            selectedTab = 5
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("⚔️", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                // Item 7: Backup & Restore
-                NavigationDrawerItem(
-                    label = { Text("Backup & Restore", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
-                    selected = selectedTab == 7,
-                    onClick = {
-                        selectedTab = 7
-                        scope.launch { drawerState.close() }
-                    },
-                    icon = { Text("💾", fontSize = 20.sp) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = Color(0x22C59BFF),
-                        selectedIconColor = PrimaryPurple,
-                        selectedTextColor = PrimaryPurple,
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                    // Item 6: Mastercraft Stats
+                    NavigationDrawerItem(
+                        label = { Text("Mastercraft Stats", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 6,
+                        onClick = {
+                            selectedTab = 6
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("📈", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = DarkBorder, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // --- BOSSING & DAMAGE CATEGORY ---
+                    Text(
+                        text = "BOSSING & DAMAGE",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryPurple,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 10.dp)
+                    )
+
+                    // Item 7: Boss Accessory Tracker
+                    NavigationDrawerItem(
+                        label = { Text("Boss Accessory Tracker", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 7,
+                        onClick = {
+                            selectedTab = 7
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("🏆", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Item 8: Damage Calculator
+                    NavigationDrawerItem(
+                        label = { Text("Damage Calculator", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 8,
+                        onClick = {
+                            selectedTab = 8
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("💥", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = DarkBorder, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // --- SYSTEM CATEGORY ---
+                    Text(
+                        text = "SYSTEM",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryPurple,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 10.dp)
+                    )
+
+                    // Item 9: Backup & Restore
+                    NavigationDrawerItem(
+                        label = { Text("Backup & Restore", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 9,
+                        onClick = {
+                            selectedTab = 9
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("💾", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
                 }
             }
         }
@@ -266,6 +359,8 @@ fun MainScreen(
                                 4 -> "Necro Tracker"
                                 5 -> "Mastercraft Tracker"
                                 6 -> "Mastercraft Stats"
+                                7 -> "Boss Accessory Tracker"
+                                8 -> "Damage Calculator"
                                 else -> "Backup & Restore"
                             },
                             fontWeight = FontWeight.Bold,
@@ -284,13 +379,18 @@ fun MainScreen(
                     },
                     actions = {
                         val isMastercraftTab = selectedTab == 5 || selectedTab == 6
-                        val hasHistory = if (isMastercraftTab) mastercraftHistory.isNotEmpty() else necroHistory.isNotEmpty()
+                        val isBossAccessoryTab = selectedTab == 7
+                        val hasHistory = when {
+                            isMastercraftTab -> mastercraftHistory.isNotEmpty()
+                            isBossAccessoryTab -> bossAccessoryHistory.isNotEmpty()
+                            else -> necroHistory.isNotEmpty()
+                        }
                         if (hasHistory) {
                             IconButton(onClick = {
-                                val msg = if (isMastercraftTab) {
-                                    viewModel.undoLastMastercraftAttempt()
-                                } else {
-                                    viewModel.undoLastNecroAction()
+                                val msg = when {
+                                    isMastercraftTab -> viewModel.undoLastMastercraftAttempt()
+                                    isBossAccessoryTab -> viewModel.undoLastBossAccessoryAttempt()
+                                    else -> viewModel.undoLastNecroAction()
                                 }
                                 if (msg != null) {
                                     android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
@@ -324,7 +424,9 @@ fun MainScreen(
                     4 -> NecroTrackerStatsScreen(viewModel = viewModel)
                     5 -> MastercraftTrackerScreen(viewModel = viewModel)
                     6 -> MastercraftStatsScreen(viewModel = viewModel)
-                    7 -> BackupRestoreTab(viewModel = viewModel)
+                    7 -> BossAccessoryScreen(viewModel = viewModel)
+                    8 -> DamageCalculatorScreen(viewModel = viewModel)
+                    9 -> BackupRestoreTab(viewModel = viewModel)
                 }
             }
         }

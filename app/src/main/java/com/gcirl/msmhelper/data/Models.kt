@@ -40,9 +40,33 @@ data class MastercraftAttempt(
 )
 
 @Serializable
+data class BossAccessoryAttempt(
+    val timestamp: String,
+    val isSuccess: Boolean // true = Drop, false = No Drop
+)
+
+@Serializable
+data class CalcPreset(
+    val name: String,
+    val atk: Double = 0.0,
+    val skillPct: Double = 0.0,
+    val dmgPct: Double = 0.0,
+    val fdPct: Double = 0.0,
+    val atkPct: Double = 0.0,
+    val bossAtkPct: Double = 0.0,
+    val critDmgPct: Double = 0.0,
+    val mdc: Double = 40000000.0, // Default 40M
+    val bossDefensePct: Double = 0.0,
+    val iedPct: Double = 0.0
+)
+
+@Serializable
 data class MSMAppState(
     val characters: List<Character> = emptyList(),
     val activeCharIndex: Int = 0,
     val necroHistory: List<NecroAction> = emptyList(),
-    val mastercraftHistory: List<MastercraftAttempt> = emptyList()
+    val mastercraftHistory: List<MastercraftAttempt> = emptyList(),
+    val bossAccessoryHistory: List<BossAccessoryAttempt> = emptyList(),
+    val calcPresets: List<CalcPreset> = emptyList(),
+    val activePresetIndex: Int = 0
 )
