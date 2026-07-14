@@ -72,11 +72,12 @@ fun DamageCalculatorScreen(
     fun calculateDamage(preset: CalcPreset): DamageResults {
         val atk = preset.atk
         val skill = preset.skillPct
-        val dmg = preset.dmgPct
+        // Buff additions applied on top of raw stats
+        val dmg = preset.dmgPct + (if (preset.buffCandy) 30.0 else 0.0) + (if (preset.buffPork) 20.0 else 0.0)
         val fd = preset.fdPct
-        val atkPct = preset.atkPct
-        val bossAtk = preset.bossAtkPct
-        val critDmg = preset.critDmgPct
+        val atkPct = preset.atkPct + (if (preset.buffYogurt) 50.0 else 0.0)
+        val bossAtk = preset.bossAtkPct + (if (preset.buffShrimp) 50.0 else 0.0) + (if (preset.buffJellyfish) 20.0 else 0.0) + (if (preset.buffBossRush) 50.0 else 0.0)
+        val critDmg = preset.critDmgPct + (if (preset.buffChestnut) 30.0 else 0.0)
         val mdc = preset.mdc
         val defense = preset.bossDefensePct
         val ied = preset.iedPct
@@ -370,6 +371,54 @@ fun DamageCalculatorScreen(
                                     colors = IconButtonDefaults.iconButtonColors(containerColor = DarkSurfaceVariant)
                                 ) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Preset", tint = BreakRed)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Buff Toggles
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                        border = BorderStroke(1.dp, DarkBorder)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "BUFF TOGGLES",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
+                                letterSpacing = 1.sp
+                            )
+
+                            listOf(
+                                Triple("Candy Basket/Cane (DMG +30%)", activePreset.buffCandy) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffCandy = valVal)) },
+                                Triple("Chestnut (Crit DMG +30%)", activePreset.buffChestnut) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffChestnut = valVal)) },
+                                Triple("Fried Shrimp (Boss ATK +50%)", activePreset.buffShrimp) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffShrimp = valVal)) },
+                                Triple("Fruity Yogurt/Grape (ATK +50%)", activePreset.buffYogurt) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffYogurt = valVal)) },
+                                Triple("Pork/Snail (DMG +20%)", activePreset.buffPork) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffPork = valVal)) },
+                                Triple("Jellyfish (Boss ATK +20%)", activePreset.buffJellyfish) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffJellyfish = valVal)) },
+                                Triple("Boss Rush (Boss ATK +50%)", activePreset.buffBossRush) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffBossRush = valVal)) }
+                            ).forEach { (label, checked, onToggle) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(label, fontSize = 13.sp, color = TextPrimary)
+                                    Switch(
+                                        checked = checked,
+                                        onCheckedChange = onToggle,
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = PrimaryPurple,
+                                            checkedTrackColor = PrimaryPurple.copy(alpha = 0.3f)
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -712,6 +761,54 @@ fun DamageCalculatorScreen(
                                 colors = IconButtonDefaults.iconButtonColors(containerColor = DarkSurfaceVariant)
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete Preset", tint = BreakRed)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Buff Toggles
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                    border = BorderStroke(1.dp, DarkBorder)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "BUFF TOGGLES",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextMuted,
+                            letterSpacing = 1.sp
+                        )
+
+                        listOf(
+                            Triple("Candy Basket/Cane (DMG +30%)", activePreset.buffCandy) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffCandy = valVal)) },
+                            Triple("Chestnut (Crit DMG +30%)", activePreset.buffChestnut) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffChestnut = valVal)) },
+                            Triple("Fried Shrimp (Boss ATK +50%)", activePreset.buffShrimp) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffShrimp = valVal)) },
+                            Triple("Fruity Yogurt/Grape (ATK +50%)", activePreset.buffYogurt) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffYogurt = valVal)) },
+                            Triple("Pork/Snail (DMG +20%)", activePreset.buffPork) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffPork = valVal)) },
+                            Triple("Jellyfish (Boss ATK +20%)", activePreset.buffJellyfish) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffJellyfish = valVal)) },
+                            Triple("Boss Rush (Boss ATK +50%)", activePreset.buffBossRush) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffBossRush = valVal)) }
+                        ).forEach { (label, checked, onToggle) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(label, fontSize = 13.sp, color = TextPrimary)
+                                Switch(
+                                    checked = checked,
+                                    onCheckedChange = onToggle,
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = PrimaryPurple,
+                                        checkedTrackColor = PrimaryPurple.copy(alpha = 0.3f)
+                                    )
+                                )
                             }
                         }
                     }

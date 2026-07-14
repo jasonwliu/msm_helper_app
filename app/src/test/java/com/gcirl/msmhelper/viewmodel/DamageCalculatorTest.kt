@@ -9,11 +9,11 @@ class DamageCalculatorTest {
     private fun calculateDamageForTest(preset: CalcPreset): TestDamageResults {
         val atk = preset.atk
         val skill = preset.skillPct
-        val dmg = preset.dmgPct
+        val dmg = preset.dmgPct + (if (preset.buffCandy) 30.0 else 0.0) + (if (preset.buffPork) 20.0 else 0.0)
         val fd = preset.fdPct
-        val atkPct = preset.atkPct
-        val bossAtk = preset.bossAtkPct
-        val critDmg = preset.critDmgPct
+        val atkPct = preset.atkPct + (if (preset.buffYogurt) 50.0 else 0.0)
+        val bossAtk = preset.bossAtkPct + (if (preset.buffShrimp) 50.0 else 0.0) + (if (preset.buffJellyfish) 20.0 else 0.0) + (if (preset.buffBossRush) 50.0 else 0.0)
+        val critDmg = preset.critDmgPct + (if (preset.buffChestnut) 30.0 else 0.0)
         val mdc = preset.mdc
         val defense = preset.bossDefensePct
         val ied = preset.iedPct
@@ -123,6 +123,47 @@ class DamageCalculatorTest {
         val results = calculateDamageForTest(preset)
         // Multiplier shouldn't be negative, should coerce to 0.0
         assertEquals(0.0, results.defMult, 0.001)
+    }
+
+    @Test
+    fun calculate_withBuffsEnabled_addsBuffPercentagesCorrectly() {
+        val preset = CalcPreset(
+            name = "Test Buffs",
+            atk = 20000.0,
+            skillPct = 500.0,
+            dmgPct = 50.0, // base
+            fdPct = 50.0,
+            atkPct = 0.0,  // base
+            bossAtkPct = 0.0, // base
+            critDmgPct = 170.0, // base
+            mdc = 40000000.0,
+            bossDefensePct = 0.0,
+            iedPct = 0.0,
+            buffCandy = true,      // +30% DMG
+            buffPork = true,       // +20% DMG
+            buffChestnut = true,   // +30% Crit DMG
+            buffShrimp = true,     // +50% Boss ATK
+            buffYogurt = false,    // Keep ATK base
+            buffJellyfish = true,  // +20% Boss ATK
+            buffBossRush = true    // +50% Boss ATK
+        )
+        val results = calculateDamageForTest(preset)
+
+        // Expected final percentages:
+        // DMG = 50 + 30 + 20 = 100%
+        // Crit DMG = 170 + 30 = 200%
+        // Boss ATK = 0 + 50 + 20 + 50 = 120%
+        // ATK% = 0%
+        // Let's verify formula:
+        // skillMultiplier = 500 / 100 = 5.0
+        // dmgMultiplier = 1.0 + 100/100 = 2.0
+        // fdMultiplier = 1.0 + 50/100 = 1.5
+        // baseAtkMultiplier = 1.0 + 0/100 + 5.0 * (120/100) = 1.0 + 6.0 = 7.0
+        // nonCritPotential = 20000 * 5.0 * 2.0 * 1.5 * 7.0 = 2,100,000.0
+        // critPotential = 2100000 * (1.0 + 2.0 + 0.2) = 2100000 * 3.2 = 6,720,000.0
+
+        assertEquals(2100000.0, results.nonCritPotential, 0.01)
+        assertEquals(6720000.0, results.critPotential, 0.01)
     }
 }
 

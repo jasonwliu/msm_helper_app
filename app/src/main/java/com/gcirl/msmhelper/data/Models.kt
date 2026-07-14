@@ -57,7 +57,14 @@ data class CalcPreset(
     val critDmgPct: Double = 0.0,
     val mdc: Double = 40000000.0, // Default 40M
     val bossDefensePct: Double = 0.0,
-    val iedPct: Double = 0.0
+    val iedPct: Double = 0.0,
+    val buffCandy: Boolean = false,
+    val buffChestnut: Boolean = false,
+    val buffShrimp: Boolean = false,
+    val buffYogurt: Boolean = false,
+    val buffPork: Boolean = false,
+    val buffJellyfish: Boolean = false,
+    val buffBossRush: Boolean = false
 )
 
 @Serializable
