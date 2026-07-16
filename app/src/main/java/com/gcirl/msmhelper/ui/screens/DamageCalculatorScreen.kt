@@ -243,6 +243,122 @@ fun CharacterStatsContent(
                 )
             }
         }
+
+        HorizontalDivider(color = DarkBorder, thickness = 0.5.dp)
+
+        var skillModifiersExpanded by remember { mutableStateOf(false) }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { skillModifiersExpanded = !skillModifiersExpanded }
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "SKILL MODIFIERS LIST",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextMuted,
+                letterSpacing = 1.sp
+            )
+            Text(
+                text = if (skillModifiersExpanded) "Collapse ▲" else "Expand ▼",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = PrimaryPurple
+            )
+        }
+
+        if (skillModifiersExpanded) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                activePreset.skillModifiers.forEachIndexed { idx, modifier ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        var dropdownExpanded by remember { mutableStateOf(false) }
+                        Box(modifier = Modifier.weight(1.2f)) {
+                            OutlinedButton(
+                                onClick = { dropdownExpanded = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(4.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                                border = BorderStroke(1.dp, DarkBorder)
+                            ) {
+                                Text(modifier.type, fontSize = 12.sp, maxLines = 1)
+                            }
+                            DropdownMenu(
+                                expanded = dropdownExpanded,
+                                onDismissRequest = { dropdownExpanded = false },
+                                modifier = Modifier.background(DarkSurface)
+                            ) {
+                                listOf("Skill DMG", "FD", "IED").forEach { typeOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(typeOption, color = TextPrimary) },
+                                        onClick = {
+                                            val newList = activePreset.skillModifiers.toMutableList()
+                                            newList[idx] = modifier.copy(type = typeOption)
+                                            viewModel.updateActivePreset(activePreset.copy(skillModifiers = newList))
+                                            dropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        DmgCalcTextField(
+                            value = modifier.value,
+                            onUpdate = { newVal ->
+                                val newList = activePreset.skillModifiers.toMutableList()
+                                newList[idx] = modifier.copy(value = newVal)
+                                viewModel.updateActivePreset(activePreset.copy(skillModifiers = newList))
+                            },
+                            label = "Value %",
+                            modifier = Modifier.width(90.dp)
+                        )
+
+                        IconButton(
+                            onClick = {
+                                val newList = activePreset.skillModifiers.toMutableList()
+                                newList.removeAt(idx)
+                                viewModel.updateActivePreset(activePreset.copy(skillModifiers = newList))
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Text("❌", color = BreakRed, fontSize = 14.sp)
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Skill DMG", "FD", "IED").forEach { typeName ->
+                        Button(
+                            onClick = {
+                                viewModel.updateActivePreset(
+                                    activePreset.copy(
+                                        skillModifiers = activePreset.skillModifiers + SkillModifier(type = typeName, value = 0.0)
+                                    )
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple.copy(alpha = 0.1f)),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(vertical = 4.dp)
+                        ) {
+                            Text("+ $typeName", color = PrimaryPurple, fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (showHelpDialog) {
@@ -262,7 +378,8 @@ fun CharacterStatsContent(
                     Text("• Boss Def %: Boss defense rate (usually 100% or more for high bosses).", color = TextPrimary, fontSize = 13.sp)
                     Text("• IED %: Ignore Enemy Defense percentage (reduces boss defense penalty). Supports adding multiple individual multiplicative sources.", color = TextPrimary, fontSize = 13.sp)
                     Text("• Skill Mod %: Final multiplier for specific skill levels/reinforcements (e.g. Hyper Skill Reinforce passive +20%, node boosts).", color = TextPrimary, fontSize = 13.sp)
-                    Text("• Your AF / Req AF: Arcane Force scaling. Having >= 1.5x Req AF yields a 1.5x final damage bonus.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• Your AF / Req AF: Arcane Force scaling. Having >= 1.5x gives +50% ATK% & +5.4M MDC; >= 1.4x gives +30% ATK% & +2.7M MDC; >= 1.3x gives +30% ATK% & +2.16M MDC; >= 1.2x gives +15% ATK% & +1.08M MDC; >= 1.1x gives +15% ATK% & +540K MDC. Under 1.0x AF starts at a 50% damage penalty, increasing by 10% penalty for each 0.1x ratio drop down to a cap of 99% penalty.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• Skill Modifiers List: Add custom multipliers for Node boosts (+Skill DMG), Hyper skill passive boosters (+FD), or specific skill ignore defense stats (+IED).", color = TextPrimary, fontSize = 13.sp)
                 }
             },
             confirmButton = {
@@ -321,25 +438,85 @@ fun DamageCalculatorScreen(
         // Buff additions applied on top of raw stats
         val dmg = preset.dmgPct + (if (preset.buffCandy) 30.0 else 0.0) + (if (preset.buffPork) 20.0 else 0.0)
         val fd = preset.fdPct
-        val atkPct = preset.atkPct + (if (preset.buffYogurt) 50.0 else 0.0)
+        
+        // Arcane Force (AF) parameters
+        val ratio = if (preset.reqAf > 0.0) preset.yourAf / preset.reqAf else 1.0
+        var afAtkPctBonus = 0.0
+        var afMdcBonus = 0.0
+        var afDamageMultiplier = 1.0
+
+        if (preset.reqAf > 0.0) {
+            when {
+                ratio >= 1.5 -> {
+                    afAtkPctBonus = 50.0
+                    afMdcBonus = 5400000.0
+                }
+                ratio >= 1.4 -> {
+                    afAtkPctBonus = 30.0
+                    afMdcBonus = 2700000.0
+                }
+                ratio >= 1.3 -> {
+                    afAtkPctBonus = 30.0
+                    afMdcBonus = 2160000.0
+                }
+                ratio >= 1.2 -> {
+                    afAtkPctBonus = 15.0
+                    afMdcBonus = 1080000.0
+                }
+                ratio >= 1.1 -> {
+                    afAtkPctBonus = 15.0
+                    afMdcBonus = 540000.0
+                }
+                ratio >= 1.0 -> {
+                    // No bonus, no penalty
+                }
+                ratio >= 0.9 -> {
+                    afDamageMultiplier = 0.50
+                }
+                ratio >= 0.8 -> {
+                    afDamageMultiplier = 0.40
+                }
+                ratio >= 0.7 -> {
+                    afDamageMultiplier = 0.30
+                }
+                ratio >= 0.6 -> {
+                    afDamageMultiplier = 0.20
+                }
+                ratio >= 0.5 -> {
+                    afDamageMultiplier = 0.10
+                }
+                else -> {
+                    afDamageMultiplier = 0.01 // 99% penalty
+                }
+            }
+        }
+
+        val atkPct = preset.atkPct + (if (preset.buffYogurt) 50.0 else 0.0) + afAtkPctBonus
         val bossAtk = preset.bossAtkPct + (if (preset.buffShrimp) 50.0 else 0.0) + (if (preset.buffJellyfish) 20.0 else 0.0) + (if (preset.buffBossRush) 50.0 else 0.0)
         val critDmg = preset.critDmgPct + (if (preset.buffChestnut) 30.0 else 0.0)
-        val mdc = preset.mdc
+        val mdc = preset.mdc + afMdcBonus
         val defense = preset.bossDefensePct
         
         // IED calculation (individual vs total)
-        val ied = if (preset.useIndividualIed && preset.iedSources.isNotEmpty()) {
+        val baseIed = if (preset.useIndividualIed && preset.iedSources.isNotEmpty()) {
             val product = preset.iedSources.fold(1.0) { acc, source -> acc * (1.0 - (source / 100.0)) }
             (1.0 - product) * 100.0
         } else {
             preset.iedPct
         }
 
+        // Apply Skill Modifiers
+        val skillDmgModSum = preset.skillModifiers.filter { it.type == "Skill DMG" }.sumOf { it.value }
+        val fdModProduct = preset.skillModifiers.filter { it.type == "FD" }.fold(1.0) { acc, mod -> acc * (1.0 + mod.value / 100.0) }
+        val iedModProduct = preset.skillModifiers.filter { it.type == "IED" }.fold(1.0) { acc, mod -> acc * (1.0 - mod.value / 100.0) }
+
+        val finalIed = (1.0 - (1.0 - baseIed / 100.0) * iedModProduct) * 100.0
+
         // Formulas:
-        // ATK * skill% * (1 + DMG%) * (1 + FD%) * (1 + ATK% + skill% * BossATK%)
-        val skillMultiplier = skill / 100.0
+        // ATK * skillMultiplier * (1 + DMG%) * fdMultiplier * baseAtkMultiplier
+        val skillMultiplier = (skill / 100.0) * (1.0 + skillDmgModSum / 100.0)
         val dmgMultiplier = 1.0 + (dmg / 100.0)
-        val fdMultiplier = 1.0 + (fd / 100.0)
+        val fdMultiplier = (1.0 + (fd / 100.0)) * fdModProduct
         val baseAtkMultiplier = 1.0 + (atkPct / 100.0) + (skillMultiplier * (bossAtk / 100.0))
 
         val skillModMultiplier = 1.0 + (preset.skillModPct / 100.0)
@@ -347,27 +524,17 @@ fun DamageCalculatorScreen(
         val nonCritPotential = atk * skillMultiplier * dmgMultiplier * fdMultiplier * baseAtkMultiplier * skillModMultiplier
         val critPotential = nonCritPotential * (1.0 + (critDmg / 100.0) + 0.2)
 
-        // Arcane Force (AF) multiplier
-        val afMult = if (preset.reqAf > 0.0) {
-            val ratio = preset.yourAf / preset.reqAf
-            if (ratio >= 1.5) 1.5
-            else if (ratio >= 1.0) ratio
-            else (0.10 + ratio * 0.90).coerceAtLeast(0.10)
-        } else {
-            1.0
-        }
-
         // Boss defense & IED term:
         // DefenseMultiplier = 1 - Boss Defense * (Floor((1 - IED) * (1 - 0.15) * 1000)) / 1000
-        val iedFactor = (1.0 - (ied / 100.0)) * 0.85
+        val iedFactor = (1.0 - (finalIed / 100.0)) * 0.85
         val iedTerm = Math.floor(iedFactor * 1000.0 + 1e-9) / 1000.0
         val defMult = (1.0 - (defense / 100.0) * iedTerm).coerceAtLeast(0.0)
 
-        // Final potential values scaled by AF multiplier
-        val nonCritDefPotential = nonCritPotential * defMult * afMult
-        val critDefPotential = critPotential * defMult * afMult
+        // Final potential values scaled by AF multiplier and defense multiplier
+        val nonCritDefPotential = nonCritPotential * defMult * afDamageMultiplier
+        val critDefPotential = critPotential * defMult * afDamageMultiplier
 
-        // Capped damage
+        // Capped damage using boosted MDC
         val cappedMdc = mdc * defMult
         val nonCritCapped = Math.min(nonCritDefPotential, cappedMdc)
         val critCapped = Math.min(critDefPotential, cappedMdc)

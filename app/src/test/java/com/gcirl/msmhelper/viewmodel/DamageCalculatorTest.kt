@@ -11,22 +11,82 @@ class DamageCalculatorTest {
         val skill = preset.skillPct
         val dmg = preset.dmgPct + (if (preset.buffCandy) 30.0 else 0.0) + (if (preset.buffPork) 20.0 else 0.0)
         val fd = preset.fdPct
-        val atkPct = preset.atkPct + (if (preset.buffYogurt) 50.0 else 0.0)
+        
+        // Arcane Force (AF) parameters
+        val ratio = if (preset.reqAf > 0.0) preset.yourAf / preset.reqAf else 1.0
+        var afAtkPctBonus = 0.0
+        var afMdcBonus = 0.0
+        var afDamageMultiplier = 1.0
+
+        if (preset.reqAf > 0.0) {
+            when {
+                ratio >= 1.5 -> {
+                    afAtkPctBonus = 50.0
+                    afMdcBonus = 5400000.0
+                }
+                ratio >= 1.4 -> {
+                    afAtkPctBonus = 30.0
+                    afMdcBonus = 2700000.0
+                }
+                ratio >= 1.3 -> {
+                    afAtkPctBonus = 30.0
+                    afMdcBonus = 2160000.0
+                }
+                ratio >= 1.2 -> {
+                    afAtkPctBonus = 15.0
+                    afMdcBonus = 1080000.0
+                }
+                ratio >= 1.1 -> {
+                    afAtkPctBonus = 15.0
+                    afMdcBonus = 540000.0
+                }
+                ratio >= 1.0 -> {
+                    // No bonus, no penalty
+                }
+                ratio >= 0.9 -> {
+                    afDamageMultiplier = 0.50
+                }
+                ratio >= 0.8 -> {
+                    afDamageMultiplier = 0.40
+                }
+                ratio >= 0.7 -> {
+                    afDamageMultiplier = 0.30
+                }
+                ratio >= 0.6 -> {
+                    afDamageMultiplier = 0.20
+                }
+                ratio >= 0.5 -> {
+                    afDamageMultiplier = 0.10
+                }
+                else -> {
+                    afDamageMultiplier = 0.01 // 99% penalty
+                }
+            }
+        }
+
+        val atkPct = preset.atkPct + (if (preset.buffYogurt) 50.0 else 0.0) + afAtkPctBonus
         val bossAtk = preset.bossAtkPct + (if (preset.buffShrimp) 50.0 else 0.0) + (if (preset.buffJellyfish) 20.0 else 0.0) + (if (preset.buffBossRush) 50.0 else 0.0)
         val critDmg = preset.critDmgPct + (if (preset.buffChestnut) 30.0 else 0.0)
-        val mdc = preset.mdc
+        val mdc = preset.mdc + afMdcBonus
         val defense = preset.bossDefensePct
         
-        val ied = if (preset.useIndividualIed && preset.iedSources.isNotEmpty()) {
+        val baseIed = if (preset.useIndividualIed && preset.iedSources.isNotEmpty()) {
             val product = preset.iedSources.fold(1.0) { acc, source -> acc * (1.0 - (source / 100.0)) }
             (1.0 - product) * 100.0
         } else {
             preset.iedPct
         }
 
-        val skillMultiplier = skill / 100.0
+        // Apply Skill Modifiers
+        val skillDmgModSum = preset.skillModifiers.filter { it.type == "Skill DMG" }.sumOf { it.value }
+        val fdModProduct = preset.skillModifiers.filter { it.type == "FD" }.fold(1.0) { acc, mod -> acc * (1.0 + mod.value / 100.0) }
+        val iedModProduct = preset.skillModifiers.filter { it.type == "IED" }.fold(1.0) { acc, mod -> acc * (1.0 - mod.value / 100.0) }
+
+        val finalIed = (1.0 - (1.0 - baseIed / 100.0) * iedModProduct) * 100.0
+
+        val skillMultiplier = (skill / 100.0) * (1.0 + skillDmgModSum / 100.0)
         val dmgMultiplier = 1.0 + (dmg / 100.0)
-        val fdMultiplier = 1.0 + (fd / 100.0)
+        val fdMultiplier = (1.0 + (fd / 100.0)) * fdModProduct
         val baseAtkMultiplier = 1.0 + (atkPct / 100.0) + (skillMultiplier * (bossAtk / 100.0))
 
         val skillModMultiplier = 1.0 + (preset.skillModPct / 100.0)
@@ -34,21 +94,12 @@ class DamageCalculatorTest {
         val nonCritPotential = atk * skillMultiplier * dmgMultiplier * fdMultiplier * baseAtkMultiplier * skillModMultiplier
         val critPotential = nonCritPotential * (1.0 + (critDmg / 100.0) + 0.2)
 
-        val afMult = if (preset.reqAf > 0.0) {
-            val ratio = preset.yourAf / preset.reqAf
-            if (ratio >= 1.5) 1.5
-            else if (ratio >= 1.0) ratio
-            else (0.10 + ratio * 0.90).coerceAtLeast(0.10)
-        } else {
-            1.0
-        }
-
-        val iedFactor = (1.0 - (ied / 100.0)) * 0.85
+        val iedFactor = (1.0 - (finalIed / 100.0)) * 0.85
         val iedTerm = Math.floor(iedFactor * 1000.0 + 1e-9) / 1000.0
         val defMult = (1.0 - (defense / 100.0) * iedTerm).coerceAtLeast(0.0)
 
-        val nonCritDefPotential = nonCritPotential * defMult * afMult
-        val critDefPotential = critPotential * defMult * afMult
+        val nonCritDefPotential = nonCritPotential * defMult * afDamageMultiplier
+        val critDefPotential = critPotential * defMult * afDamageMultiplier
 
         val cappedMdc = mdc * defMult
         val nonCritCapped = Math.min(nonCritDefPotential, cappedMdc)
@@ -201,15 +252,49 @@ class DamageCalculatorTest {
             iedSources = listOf(30.0, 30.0), // Combined: 1.0 - 0.7 * 0.7 = 51.0%
             skillModPct = 20.0, // +20% skill modifier final multiplier
             yourAf = 150.0,
-            reqAf = 100.0 // Ratio: 1.5 -> 1.5x final damage output multiplier
+            reqAf = 100.0 // Ratio: 1.5 -> +50% ATK% bonus & no damage penalty
         )
         val results = calculateDamageForTest(preset)
 
         // IED: 51% -> iedFactor = (1.0 - 0.51) * 0.85 = 0.4165 -> iedTerm = 0.416
         // defMult = 1.0 - 1.0 * 0.416 = 0.584
-        // nonCritPotential (pre-def, pre-AF) = 10000 * 1.0 (skill) * 1.2 (skillMod) = 12000.0
-        // nonCritDefPotential = 12000.0 * 0.584 * 1.5 (AF bonus) = 10512.0
+        // 1.5x AF gives +50% ATK% bonus -> baseAtkMultiplier = 1.5
+        // nonCritPotential (pre-def, pre-AF) = 10000 * 1.0 (skill) * 1.5 (baseAtkMult) * 1.2 (skillMod) = 18000.0
+        // nonCritDefPotential = 18000.0 * 0.584 * 1.0 (no damage penalty) = 10512.0
         assertEquals(10512.0, results.nonCritPotential, 0.01)
+    }
+
+    @Test
+    fun calculate_withSkillModifiersListAndAFPenalty_calculatesCorrectly() {
+        val preset = CalcPreset(
+            name = "Test Skill Modifiers & AF penalty",
+            atk = 10000.0,
+            skillPct = 100.0,
+            dmgPct = 0.0,
+            fdPct = 0.0,
+            atkPct = 0.0,
+            bossAtkPct = 0.0,
+            critDmgPct = 0.0,
+            mdc = 40000000.0,
+            bossDefensePct = 100.0,
+            iedPct = 0.0,
+            yourAf = 90.0,
+            reqAf = 100.0, // Ratio: 0.9 -> starts at 50% damage penalty (afDamageMultiplier = 0.50)
+            skillModifiers = listOf(
+                SkillModifier(type = "Skill DMG", value = 20.0),
+                SkillModifier(type = "FD", value = 10.0),
+                SkillModifier(type = "IED", value = 10.0)
+            )
+        )
+        val results = calculateDamageForTest(preset)
+
+        // Skill multiplier: 1.0 * 1.2 = 1.2
+        // FD multiplier: 1.0 * 1.1 = 1.1
+        // IED: 10% -> iedFactor = (1.0 - 0.1) * 0.85 = 0.765 -> iedTerm = 0.765
+        // defMult = 1.0 - 1.0 * 0.765 = 0.235
+        // nonCritPotential (pre-def, pre-AF) = 10000 * 1.2 (skill) * 1.0 (dmg) * 1.1 (fd) = 13200.0
+        // nonCritDefPotential = 13200.0 * 0.235 * 0.50 (AF penalty) = 1551.0
+        assertEquals(1551.0, results.nonCritPotential, 0.01)
     }
 }
 

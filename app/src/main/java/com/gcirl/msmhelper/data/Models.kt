@@ -46,6 +46,12 @@ data class BossAccessoryAttempt(
 )
 
 @Serializable
+data class SkillModifier(
+    val type: String, // "Skill DMG", "FD", "IED"
+    val value: Double
+)
+
+@Serializable
 data class CalcPreset(
     val name: String,
     val atk: Double = 0.0,
@@ -69,7 +75,8 @@ data class CalcPreset(
     val yourAf: Double = 0.0,
     val reqAf: Double = 0.0,
     val useIndividualIed: Boolean = false,
-    val iedSources: List<Double> = emptyList()
+    val iedSources: List<Double> = emptyList(),
+    val skillModifiers: List<SkillModifier> = emptyList()
 )
 
 @Serializable
