@@ -64,7 +64,12 @@ data class CalcPreset(
     val buffYogurt: Boolean = false,
     val buffPork: Boolean = false,
     val buffJellyfish: Boolean = false,
-    val buffBossRush: Boolean = false
+    val buffBossRush: Boolean = false,
+    val skillModPct: Double = 0.0,
+    val yourAf: Double = 0.0,
+    val reqAf: Double = 0.0,
+    val useIndividualIed: Boolean = false,
+    val iedSources: List<Double> = emptyList()
 )
 
 @Serializable
@@ -75,5 +80,6 @@ data class MSMAppState(
     val mastercraftHistory: List<MastercraftAttempt> = emptyList(),
     val bossAccessoryHistory: List<BossAccessoryAttempt> = emptyList(),
     val calcPresets: List<CalcPreset> = emptyList(),
-    val activePresetIndex: Int = 0
+    val activePresetIndex: Int = 0,
+    val selectedTab: Int = 0
 )

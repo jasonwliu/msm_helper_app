@@ -41,7 +41,17 @@ fun MainScreen(
         MSMHelperViewModel(context.applicationContext as Application)
     }
 
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val selectedTabFlow = viewModel.selectedTab.collectAsState()
+    val selectedTabDelegate = remember(selectedTabFlow.value) {
+        object : MutableState<Int> {
+            override var value: Int
+                get() = selectedTabFlow.value
+                set(v) { viewModel.setSelectedTab(v) }
+            override fun component1(): Int = value
+            override fun component2(): (Int) -> Unit = { value = it }
+        }
+    }
+    var selectedTab by selectedTabDelegate
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val necroHistory by viewModel.necroHistory.collectAsState()

@@ -30,6 +30,251 @@ import com.gcirl.msmhelper.theme.*
 import com.gcirl.msmhelper.viewmodel.MSMHelperViewModel
 import java.util.Locale
 
+@Composable
+fun DmgCalcTextField(
+    value: Double,
+    onUpdate: (Double) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    borderColor: Color = PrimaryPurple
+) {
+    var textState by remember(value) {
+        mutableStateOf(if (value == 0.0) "" else {
+            if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
+        })
+    }
+
+    OutlinedTextField(
+        value = textState,
+        onValueChange = { newValue ->
+            textState = newValue
+            val parsed = newValue.toDoubleOrNull() ?: 0.0
+            onUpdate(parsed)
+        },
+        label = { Text(label, fontSize = 11.sp) },
+        modifier = modifier,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = TextPrimary,
+            unfocusedTextColor = TextPrimary,
+            focusedBorderColor = borderColor,
+            unfocusedBorderColor = DarkBorder,
+            focusedContainerColor = DarkSurfaceVariant,
+            unfocusedContainerColor = DarkSurfaceVariant
+        ),
+        singleLine = true
+    )
+}
+
+@Composable
+fun CharacterStatsContent(
+    activePreset: CalcPreset,
+    viewModel: MSMHelperViewModel
+) {
+    var showHelpDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "CHARACTER STATS",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextMuted,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                IconButton(
+                    onClick = { showHelpDialog = true },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Text("?", color = PrimaryPurple, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+        }
+
+        // Standard fields
+        listOf(
+            Triple("ATK", activePreset.atk) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(atk = valVal)) },
+            Triple("Skill %", activePreset.skillPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(skillPct = valVal)) },
+            Triple("DMG %", activePreset.dmgPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(dmgPct = valVal)) },
+            Triple("FD %", activePreset.fdPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(fdPct = valVal)) },
+            Triple("ATK %", activePreset.atkPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(atkPct = valVal)) },
+            Triple("Boss ATK %", activePreset.bossAtkPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(bossAtkPct = valVal)) },
+            Triple("Crit Dmg %", activePreset.critDmgPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(critDmgPct = valVal)) },
+            Triple("MDC", activePreset.mdc) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(mdc = valVal)) },
+            Triple("Boss Def %", activePreset.bossDefensePct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(bossDefensePct = valVal)) },
+            Triple("Skill Mod %", activePreset.skillModPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(skillModPct = valVal)) },
+            Triple("Your AF", activePreset.yourAf) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(yourAf = valVal)) },
+            Triple("Req AF", activePreset.reqAf) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(reqAf = valVal)) }
+        ).forEach { (label, value, onUpdate) ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 13.sp,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1.5f)
+                )
+                DmgCalcTextField(
+                    value = value,
+                    onUpdate = onUpdate,
+                    label = label,
+                    modifier = Modifier.width(120.dp)
+                )
+            }
+        }
+
+        HorizontalDivider(color = DarkBorder, thickness = 0.5.dp)
+
+        // IED Section
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Use Individual IED Sources",
+                fontSize = 13.sp,
+                color = TextPrimary
+            )
+            Switch(
+                checked = activePreset.useIndividualIed,
+                onCheckedChange = { valVal ->
+                    viewModel.updateActivePreset(activePreset.copy(useIndividualIed = valVal))
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = PrimaryPurple,
+                    checkedTrackColor = PrimaryPurple.copy(alpha = 0.3f)
+                )
+            )
+        }
+
+        if (activePreset.useIndividualIed) {
+            val computedIed = if (activePreset.iedSources.isNotEmpty()) {
+                val product = activePreset.iedSources.fold(1.0) { acc, source -> acc * (1.0 - (source / 100.0)) }
+                (1.0 - product) * 100.0
+            } else {
+                0.0
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Combined Total IED %", fontSize = 13.sp, color = TextMuted)
+                Text(String.format(Locale.US, "%.2f%%", computedIed), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = PrimaryPurple)
+            }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                activePreset.iedSources.forEachIndexed { idx, sourceValue ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Source ${idx + 1}", fontSize = 12.sp, color = TextPrimary, modifier = Modifier.weight(1f))
+                        DmgCalcTextField(
+                            value = sourceValue,
+                            onUpdate = { newVal ->
+                                val newList = activePreset.iedSources.toMutableList()
+                                newList[idx] = newVal
+                                viewModel.updateActivePreset(activePreset.copy(iedSources = newList))
+                            },
+                            label = "IED %",
+                            modifier = Modifier.width(100.dp)
+                        )
+                        IconButton(
+                            onClick = {
+                                val newList = activePreset.iedSources.toMutableList()
+                                newList.removeAt(idx)
+                                viewModel.updateActivePreset(activePreset.copy(iedSources = newList))
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Text("❌", color = BreakRed, fontSize = 14.sp)
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        viewModel.updateActivePreset(
+                            activePreset.copy(iedSources = activePreset.iedSources + 0.0)
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple.copy(alpha = 0.1f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("+ Add IED Source", color = PrimaryPurple, fontSize = 12.sp)
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "IED %",
+                    fontSize = 13.sp,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1.5f)
+                )
+                DmgCalcTextField(
+                    value = activePreset.iedPct,
+                    onUpdate = { valVal ->
+                        viewModel.updateActivePreset(activePreset.copy(iedPct = valVal))
+                    },
+                    label = "IED %",
+                    modifier = Modifier.width(120.dp)
+                )
+            }
+        }
+    }
+
+    if (showHelpDialog) {
+        AlertDialog(
+            onDismissRequest = { showHelpDialog = false },
+            title = { Text("Damage Calc Legend", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("• ATK: Base Physical or Magic Attack power.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• Skill %: Base damage scaling percentage from skill description.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• DMG %: Total damage increase stats.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• FD %: Final Damage multiplier (separate multiplicative factor).", color = TextPrimary, fontSize = 13.sp)
+                    Text("• ATK %: Attack percentage modifier.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• Boss ATK %: Boss Attack percentage modifier.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• Crit Dmg %: Critical Damage percentage.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• MDC: Max Damage Cap. Default is 40,000,000.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• Boss Def %: Boss defense rate (usually 100% or more for high bosses).", color = TextPrimary, fontSize = 13.sp)
+                    Text("• IED %: Ignore Enemy Defense percentage (reduces boss defense penalty). Supports adding multiple individual multiplicative sources.", color = TextPrimary, fontSize = 13.sp)
+                    Text("• Skill Mod %: Final multiplier for specific skill levels/reinforcements (e.g. Hyper Skill Reinforce passive +20%, node boosts).", color = TextPrimary, fontSize = 13.sp)
+                    Text("• Your AF / Req AF: Arcane Force scaling. Having >= 1.5x Req AF yields a 1.5x final damage bonus.", color = TextPrimary, fontSize = 13.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showHelpDialog = false }) {
+                    Text("Close", color = PrimaryPurple)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DamageCalculatorScreen(
@@ -47,6 +292,7 @@ fun DamageCalculatorScreen(
     // Dialog flags
     var showAddDialog by remember { mutableStateOf(false) }
     var newPresetName by remember { mutableStateOf("") }
+    var buffsExpanded by remember { mutableStateOf(false) }
 
     var showRenameDialog by remember { mutableStateOf(false) }
     var renamePresetName by remember { mutableStateOf("") }
@@ -80,7 +326,14 @@ fun DamageCalculatorScreen(
         val critDmg = preset.critDmgPct + (if (preset.buffChestnut) 30.0 else 0.0)
         val mdc = preset.mdc
         val defense = preset.bossDefensePct
-        val ied = preset.iedPct
+        
+        // IED calculation (individual vs total)
+        val ied = if (preset.useIndividualIed && preset.iedSources.isNotEmpty()) {
+            val product = preset.iedSources.fold(1.0) { acc, source -> acc * (1.0 - (source / 100.0)) }
+            (1.0 - product) * 100.0
+        } else {
+            preset.iedPct
+        }
 
         // Formulas:
         // ATK * skill% * (1 + DMG%) * (1 + FD%) * (1 + ATK% + skill% * BossATK%)
@@ -89,8 +342,20 @@ fun DamageCalculatorScreen(
         val fdMultiplier = 1.0 + (fd / 100.0)
         val baseAtkMultiplier = 1.0 + (atkPct / 100.0) + (skillMultiplier * (bossAtk / 100.0))
 
-        val nonCritPotential = atk * skillMultiplier * dmgMultiplier * fdMultiplier * baseAtkMultiplier
+        val skillModMultiplier = 1.0 + (preset.skillModPct / 100.0)
+
+        val nonCritPotential = atk * skillMultiplier * dmgMultiplier * fdMultiplier * baseAtkMultiplier * skillModMultiplier
         val critPotential = nonCritPotential * (1.0 + (critDmg / 100.0) + 0.2)
+
+        // Arcane Force (AF) multiplier
+        val afMult = if (preset.reqAf > 0.0) {
+            val ratio = preset.yourAf / preset.reqAf
+            if (ratio >= 1.5) 1.5
+            else if (ratio >= 1.0) ratio
+            else (0.10 + ratio * 0.90).coerceAtLeast(0.10)
+        } else {
+            1.0
+        }
 
         // Boss defense & IED term:
         // DefenseMultiplier = 1 - Boss Defense * (Floor((1 - IED) * (1 - 0.15) * 1000)) / 1000
@@ -98,8 +363,9 @@ fun DamageCalculatorScreen(
         val iedTerm = Math.floor(iedFactor * 1000.0 + 1e-9) / 1000.0
         val defMult = (1.0 - (defense / 100.0) * iedTerm).coerceAtLeast(0.0)
 
-        val nonCritDefPotential = nonCritPotential * defMult
-        val critDefPotential = critPotential * defMult
+        // Final potential values scaled by AF multiplier
+        val nonCritDefPotential = nonCritPotential * defMult * afMult
+        val critDefPotential = critPotential * defMult * afMult
 
         // Capped damage
         val cappedMdc = mdc * defMult
@@ -385,40 +651,61 @@ fun DamageCalculatorScreen(
                         border = BorderStroke(1.dp, DarkBorder)
                     ) {
                         Column(
-                            modifier = Modifier.padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "BUFF TOGGLES",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextMuted,
-                                letterSpacing = 1.sp
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { buffsExpanded = !buffsExpanded }
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "BUFF TOGGLES",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextMuted,
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    text = if (buffsExpanded) "Collapse ▲" else "Expand ▼",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryPurple
+                                )
+                            }
 
-                            listOf(
-                                Triple("Candy Basket/Cane (DMG +30%)", activePreset.buffCandy) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffCandy = valVal)) },
-                                Triple("Chestnut (Crit DMG +30%)", activePreset.buffChestnut) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffChestnut = valVal)) },
-                                Triple("Fried Shrimp (Boss ATK +50%)", activePreset.buffShrimp) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffShrimp = valVal)) },
-                                Triple("Fruity Yogurt/Grape (ATK +50%)", activePreset.buffYogurt) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffYogurt = valVal)) },
-                                Triple("Pork/Snail (DMG +20%)", activePreset.buffPork) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffPork = valVal)) },
-                                Triple("Jellyfish (Boss ATK +20%)", activePreset.buffJellyfish) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffJellyfish = valVal)) },
-                                Triple("Boss Rush (Boss ATK +50%)", activePreset.buffBossRush) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffBossRush = valVal)) }
-                            ).forEach { (label, checked, onToggle) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                            if (buffsExpanded) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 14.dp).padding(bottom = 14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(label, fontSize = 13.sp, color = TextPrimary)
-                                    Switch(
-                                        checked = checked,
-                                        onCheckedChange = onToggle,
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = PrimaryPurple,
-                                            checkedTrackColor = PrimaryPurple.copy(alpha = 0.3f)
-                                        )
-                                    )
+                                    listOf(
+                                        Triple("Candy Basket/Cane (DMG +30%)", activePreset.buffCandy) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffCandy = valVal)) },
+                                        Triple("Chestnut (Crit DMG +30%)", activePreset.buffChestnut) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffChestnut = valVal)) },
+                                        Triple("Fried Shrimp (Boss ATK +50%)", activePreset.buffShrimp) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffShrimp = valVal)) },
+                                        Triple("Fruity Yogurt/Grape (ATK +50%)", activePreset.buffYogurt) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffYogurt = valVal)) },
+                                        Triple("Pork/Snail (DMG +20%)", activePreset.buffPork) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffPork = valVal)) },
+                                        Triple("Jellyfish (Boss ATK +20%)", activePreset.buffJellyfish) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffJellyfish = valVal)) },
+                                        Triple("Boss Rush (Boss ATK +50%)", activePreset.buffBossRush) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffBossRush = valVal)) }
+                                    ).forEach { (label, checked, onToggle) ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(label, fontSize = 13.sp, color = TextPrimary)
+                                            Switch(
+                                                checked = checked,
+                                                onCheckedChange = onToggle,
+                                                colors = SwitchDefaults.colors(
+                                                    checkedThumbColor = PrimaryPurple,
+                                                    checkedTrackColor = PrimaryPurple.copy(alpha = 0.3f)
+                                                )
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -432,63 +719,7 @@ fun DamageCalculatorScreen(
                         colors = CardDefaults.cardColors(containerColor = DarkSurface),
                         border = BorderStroke(1.dp, DarkBorder)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Text(
-                                text = "CHARACTER STATS",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextMuted,
-                                letterSpacing = 1.sp
-                            )
-
-                            // List of field editors
-                            listOf(
-                                Triple("Base Attack (ATK)", activePreset.atk) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(atk = valVal)) },
-                                Triple("Skill Damage %", activePreset.skillPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(skillPct = valVal)) },
-                                Triple("Increase Damage % (DMG%)", activePreset.dmgPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(dmgPct = valVal)) },
-                                Triple("Final Damage % (FD%)", activePreset.fdPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(fdPct = valVal)) },
-                                Triple("Increase Attack % (ATK%)", activePreset.atkPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(atkPct = valVal)) },
-                                Triple("Boss Attack % (BossATK%)", activePreset.bossAtkPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(bossAtkPct = valVal)) },
-                                Triple("Critical Damage %", activePreset.critDmgPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(critDmgPct = valVal)) },
-                                Triple("Max Damage Cap (MDC)", activePreset.mdc) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(mdc = valVal)) },
-                                Triple("Boss Defense %", activePreset.bossDefensePct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(bossDefensePct = valVal)) },
-                                Triple("Ignore Enemy Defense % (IED%)", activePreset.iedPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(iedPct = valVal)) }
-                            ).forEach { (label, value, onUpdate) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = label,
-                                        fontSize = 13.sp,
-                                        color = TextPrimary,
-                                        modifier = Modifier.weight(1.5f)
-                                    )
-                                    OutlinedTextField(
-                                        value = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString(),
-                                        onValueChange = {
-                                            val numericVal = it.toDoubleOrNull() ?: 0.0
-                                            onUpdate(numericVal)
-                                        },
-                                        modifier = Modifier.width(120.dp),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedTextColor = TextPrimary,
-                                            unfocusedTextColor = TextPrimary,
-                                            focusedBorderColor = PrimaryPurple,
-                                            unfocusedBorderColor = DarkBorder,
-                                            focusedContainerColor = DarkSurfaceVariant,
-                                            unfocusedContainerColor = DarkSurfaceVariant
-                                        ),
-                                        singleLine = true
-                                    )
-                                }
-                            }
-                        }
+                        CharacterStatsContent(activePreset = activePreset, viewModel = viewModel)
                     }
                 }
             }
@@ -775,40 +1006,61 @@ fun DamageCalculatorScreen(
                     border = BorderStroke(1.dp, DarkBorder)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "BUFF TOGGLES",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextMuted,
-                            letterSpacing = 1.sp
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { buffsExpanded = !buffsExpanded }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "BUFF TOGGLES",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = if (buffsExpanded) "Collapse ▲" else "Expand ▼",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryPurple
+                            )
+                        }
 
-                        listOf(
-                            Triple("Candy Basket/Cane (DMG +30%)", activePreset.buffCandy) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffCandy = valVal)) },
-                            Triple("Chestnut (Crit DMG +30%)", activePreset.buffChestnut) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffChestnut = valVal)) },
-                            Triple("Fried Shrimp (Boss ATK +50%)", activePreset.buffShrimp) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffShrimp = valVal)) },
-                            Triple("Fruity Yogurt/Grape (ATK +50%)", activePreset.buffYogurt) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffYogurt = valVal)) },
-                            Triple("Pork/Snail (DMG +20%)", activePreset.buffPork) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffPork = valVal)) },
-                            Triple("Jellyfish (Boss ATK +20%)", activePreset.buffJellyfish) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffJellyfish = valVal)) },
-                            Triple("Boss Rush (Boss ATK +50%)", activePreset.buffBossRush) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffBossRush = valVal)) }
-                        ).forEach { (label, checked, onToggle) ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                        if (buffsExpanded) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(label, fontSize = 13.sp, color = TextPrimary)
-                                Switch(
-                                    checked = checked,
-                                    onCheckedChange = onToggle,
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = PrimaryPurple,
-                                        checkedTrackColor = PrimaryPurple.copy(alpha = 0.3f)
-                                    )
-                                )
+                                listOf(
+                                    Triple("Candy Basket/Cane (DMG +30%)", activePreset.buffCandy) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffCandy = valVal)) },
+                                    Triple("Chestnut (Crit DMG +30%)", activePreset.buffChestnut) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffChestnut = valVal)) },
+                                    Triple("Fried Shrimp (Boss ATK +50%)", activePreset.buffShrimp) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffShrimp = valVal)) },
+                                    Triple("Fruity Yogurt/Grape (ATK +50%)", activePreset.buffYogurt) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffYogurt = valVal)) },
+                                    Triple("Pork/Snail (DMG +20%)", activePreset.buffPork) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffPork = valVal)) },
+                                    Triple("Jellyfish (Boss ATK +20%)", activePreset.buffJellyfish) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffJellyfish = valVal)) },
+                                    Triple("Boss Rush (Boss ATK +50%)", activePreset.buffBossRush) { valVal: Boolean -> viewModel.updateActivePreset(activePreset.copy(buffBossRush = valVal)) }
+                                ).forEach { (label, checked, onToggle) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(label, fontSize = 13.sp, color = TextPrimary)
+                                        Switch(
+                                            checked = checked,
+                                            onCheckedChange = onToggle,
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = PrimaryPurple,
+                                                checkedTrackColor = PrimaryPurple.copy(alpha = 0.3f)
+                                            )
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -876,62 +1128,7 @@ fun DamageCalculatorScreen(
                     colors = CardDefaults.cardColors(containerColor = DarkSurface),
                     border = BorderStroke(1.dp, DarkBorder)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "CHARACTER STATS",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextMuted,
-                            letterSpacing = 1.sp
-                        )
-
-                        listOf(
-                            Triple("Base Attack (ATK)", activePreset.atk) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(atk = valVal)) },
-                            Triple("Skill Damage %", activePreset.skillPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(skillPct = valVal)) },
-                            Triple("Increase Damage % (DMG%)", activePreset.dmgPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(dmgPct = valVal)) },
-                            Triple("Final Damage % (FD%)", activePreset.fdPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(fdPct = valVal)) },
-                            Triple("Increase Attack % (ATK%)", activePreset.atkPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(atkPct = valVal)) },
-                            Triple("Boss Attack % (BossATK%)", activePreset.bossAtkPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(bossAtkPct = valVal)) },
-                            Triple("Critical Damage %", activePreset.critDmgPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(critDmgPct = valVal)) },
-                            Triple("Max Damage Cap (MDC)", activePreset.mdc) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(mdc = valVal)) },
-                            Triple("Boss Defense %", activePreset.bossDefensePct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(bossDefensePct = valVal)) },
-                            Triple("Ignore Enemy Defense % (IED%)", activePreset.iedPct) { valVal: Double -> viewModel.updateActivePreset(activePreset.copy(iedPct = valVal)) }
-                        ).forEach { (label, value, onUpdate) ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = label,
-                                    fontSize = 13.sp,
-                                    color = TextPrimary,
-                                    modifier = Modifier.weight(1.2f)
-                                )
-                                OutlinedTextField(
-                                    value = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString(),
-                                    onValueChange = {
-                                        val numericVal = it.toDoubleOrNull() ?: 0.0
-                                        onUpdate(numericVal)
-                                    },
-                                    modifier = Modifier.width(110.dp),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedTextColor = TextPrimary,
-                                        unfocusedTextColor = TextPrimary,
-                                        focusedBorderColor = PrimaryPurple,
-                                        unfocusedBorderColor = DarkBorder,
-                                        focusedContainerColor = DarkSurfaceVariant,
-                                        unfocusedContainerColor = DarkSurfaceVariant
-                                    ),
-                                    singleLine = true
-                                )
-                            }
-                        }
-                    }
+                    CharacterStatsContent(activePreset = activePreset, viewModel = viewModel)
                 }
             }
 

@@ -16,22 +16,39 @@ class DamageCalculatorTest {
         val critDmg = preset.critDmgPct + (if (preset.buffChestnut) 30.0 else 0.0)
         val mdc = preset.mdc
         val defense = preset.bossDefensePct
-        val ied = preset.iedPct
+        
+        val ied = if (preset.useIndividualIed && preset.iedSources.isNotEmpty()) {
+            val product = preset.iedSources.fold(1.0) { acc, source -> acc * (1.0 - (source / 100.0)) }
+            (1.0 - product) * 100.0
+        } else {
+            preset.iedPct
+        }
 
         val skillMultiplier = skill / 100.0
         val dmgMultiplier = 1.0 + (dmg / 100.0)
         val fdMultiplier = 1.0 + (fd / 100.0)
         val baseAtkMultiplier = 1.0 + (atkPct / 100.0) + (skillMultiplier * (bossAtk / 100.0))
 
-        val nonCritPotential = atk * skillMultiplier * dmgMultiplier * fdMultiplier * baseAtkMultiplier
+        val skillModMultiplier = 1.0 + (preset.skillModPct / 100.0)
+
+        val nonCritPotential = atk * skillMultiplier * dmgMultiplier * fdMultiplier * baseAtkMultiplier * skillModMultiplier
         val critPotential = nonCritPotential * (1.0 + (critDmg / 100.0) + 0.2)
+
+        val afMult = if (preset.reqAf > 0.0) {
+            val ratio = preset.yourAf / preset.reqAf
+            if (ratio >= 1.5) 1.5
+            else if (ratio >= 1.0) ratio
+            else (0.10 + ratio * 0.90).coerceAtLeast(0.10)
+        } else {
+            1.0
+        }
 
         val iedFactor = (1.0 - (ied / 100.0)) * 0.85
         val iedTerm = Math.floor(iedFactor * 1000.0 + 1e-9) / 1000.0
         val defMult = (1.0 - (defense / 100.0) * iedTerm).coerceAtLeast(0.0)
 
-        val nonCritDefPotential = nonCritPotential * defMult
-        val critDefPotential = critPotential * defMult
+        val nonCritDefPotential = nonCritPotential * defMult * afMult
+        val critDefPotential = critPotential * defMult * afMult
 
         val cappedMdc = mdc * defMult
         val nonCritCapped = Math.min(nonCritDefPotential, cappedMdc)
@@ -164,6 +181,35 @@ class DamageCalculatorTest {
 
         assertEquals(2100000.0, results.nonCritPotential, 0.01)
         assertEquals(6720000.0, results.critPotential, 0.01)
+    }
+
+    @Test
+    fun calculate_withArcaneForceAndIndividualIed_calculatesCorrectly() {
+        val preset = CalcPreset(
+            name = "Test AF & Individual IED",
+            atk = 10000.0,
+            skillPct = 100.0,
+            dmgPct = 0.0,
+            fdPct = 0.0,
+            atkPct = 0.0,
+            bossAtkPct = 0.0,
+            critDmgPct = 0.0,
+            mdc = 40000000.0,
+            bossDefensePct = 100.0,
+            iedPct = 0.0,
+            useIndividualIed = true,
+            iedSources = listOf(30.0, 30.0), // Combined: 1.0 - 0.7 * 0.7 = 51.0%
+            skillModPct = 20.0, // +20% skill modifier final multiplier
+            yourAf = 150.0,
+            reqAf = 100.0 // Ratio: 1.5 -> 1.5x final damage output multiplier
+        )
+        val results = calculateDamageForTest(preset)
+
+        // IED: 51% -> iedFactor = (1.0 - 0.51) * 0.85 = 0.4165 -> iedTerm = 0.416
+        // defMult = 1.0 - 1.0 * 0.416 = 0.584
+        // nonCritPotential (pre-def, pre-AF) = 10000 * 1.0 (skill) * 1.2 (skillMod) = 12000.0
+        // nonCritDefPotential = 12000.0 * 0.584 * 1.5 (AF bonus) = 10512.0
+        assertEquals(10512.0, results.nonCritPotential, 0.01)
     }
 }
 

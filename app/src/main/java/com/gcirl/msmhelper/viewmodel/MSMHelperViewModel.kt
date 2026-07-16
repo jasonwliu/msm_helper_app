@@ -44,6 +44,14 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     private val _activePresetIndex = MutableStateFlow(0)
     val activePresetIndex: StateFlow<Int> = _activePresetIndex.asStateFlow()
 
+    private val _selectedTab = MutableStateFlow(0)
+    val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
+
+    fun setSelectedTab(value: Int) {
+        _selectedTab.value = value
+        saveData()
+    }
+
     // Persistent calculator pool inputs
     private val _weaponPoolInput = MutableStateFlow("")
     val weaponPoolInput = _weaponPoolInput.asStateFlow()
@@ -120,7 +128,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             mastercraftHistory = _mastercraftHistory.value,
             bossAccessoryHistory = _bossAccessoryHistory.value,
             calcPresets = _calcPresets.value,
-            activePresetIndex = _activePresetIndex.value
+            activePresetIndex = _activePresetIndex.value,
+            selectedTab = _selectedTab.value
         )
         try {
             val jsonStr = jsonParser.encodeToString(state)
@@ -171,6 +180,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                     state.calcPresets
                 }
                 _activePresetIndex.value = state.activePresetIndex
+                _selectedTab.value = state.selectedTab
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -282,7 +292,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             mastercraftHistory = _mastercraftHistory.value,
             bossAccessoryHistory = _bossAccessoryHistory.value,
             calcPresets = _calcPresets.value,
-            activePresetIndex = _activePresetIndex.value
+            activePresetIndex = _activePresetIndex.value,
+            selectedTab = _selectedTab.value
         )
         return try {
             jsonParser.encodeToString(state)
@@ -307,6 +318,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 state.calcPresets
             }
             _activePresetIndex.value = state.activePresetIndex
+            _selectedTab.value = state.selectedTab
             saveData()
             true
         } catch (e1: Exception) {
