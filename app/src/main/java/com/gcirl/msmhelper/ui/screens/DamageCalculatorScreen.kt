@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gcirl.msmhelper.data.CalcPreset
+import com.gcirl.msmhelper.data.SkillModifier
 import com.gcirl.msmhelper.theme.*
 import com.gcirl.msmhelper.viewmodel.MSMHelperViewModel
 import java.util.Locale

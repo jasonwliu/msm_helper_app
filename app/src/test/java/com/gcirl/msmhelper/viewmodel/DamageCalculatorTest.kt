@@ -1,6 +1,7 @@
 package com.gcirl.msmhelper.viewmodel
 
 import com.gcirl.msmhelper.data.CalcPreset
+import com.gcirl.msmhelper.data.SkillModifier
 import org.junit.Assert.*
 import org.junit.Test
 
