@@ -4,8 +4,14 @@ import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -421,24 +427,261 @@ fun MainScreen(
                 )
             }
         ) { innerPadding ->
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                when (selectedTab) {
-                    0 -> DailyTrackerTab(viewModel = viewModel, onNavigateToOverview = { selectedTab = 1 })
-                    1 -> OverviewTab(viewModel = viewModel)
-                    2 -> ReadyToCraftTab(viewModel = viewModel)
-                    3 -> StoneMaximizerTab(viewModel = viewModel)
-                    4 -> NecroTrackerStatsScreen(viewModel = viewModel)
-                    5 -> MastercraftTrackerScreen(viewModel = viewModel)
-                    6 -> MastercraftStatsScreen(viewModel = viewModel)
-                    7 -> BossAccessoryScreen(viewModel = viewModel)
-                    8 -> DamageCalculatorScreen(viewModel = viewModel)
-                    9 -> BackupRestoreTab(viewModel = viewModel)
+                if (selectedTab in 0..4) {
+                    AccountSelectorBar(viewModel = viewModel)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    when (selectedTab) {
+                        0 -> DailyTrackerTab(viewModel = viewModel, onNavigateToOverview = { selectedTab = 1 })
+                        1 -> OverviewTab(viewModel = viewModel)
+                        2 -> ReadyToCraftTab(viewModel = viewModel)
+                        3 -> StoneMaximizerTab(viewModel = viewModel)
+                        4 -> NecroTrackerStatsScreen(viewModel = viewModel)
+                        5 -> MastercraftTrackerScreen(viewModel = viewModel)
+                        6 -> MastercraftStatsScreen(viewModel = viewModel)
+                        7 -> BossAccessoryScreen(viewModel = viewModel)
+                        8 -> DamageCalculatorScreen(viewModel = viewModel)
+                        9 -> BackupRestoreTab(viewModel = viewModel)
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun AccountSelectorBar(viewModel: MSMHelperViewModel) {
+    val accounts by viewModel.accounts.collectAsState()
+    val activeIndex by viewModel.activeAccountIndex.collectAsState()
+    
+    val activeAccount = accounts.getOrNull(activeIndex)
+    
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    
+    var newAccountName by remember { mutableStateOf("") }
+    var renameAccountName by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = DarkSurfaceVariant,
+        border = BorderStroke(0.5.dp, DarkBorder)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Account: ",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextMuted
+                )
+                Box {
+                    OutlinedButton(
+                        onClick = { dropdownExpanded = true },
+                        modifier = Modifier.height(36.dp),
+                        border = BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(4.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+                    ) {
+                        Text(
+                            text = activeAccount?.name ?: "No Account",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            maxLines = 1
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false },
+                        modifier = Modifier.background(DarkSurface)
+                    ) {
+                        accounts.forEachIndexed { index, account ->
+                            DropdownMenuItem(
+                                text = { Text(account.name, color = TextPrimary) },
+                                onClick = {
+                                    viewModel.selectAccount(index)
+                                    dropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        newAccountName = ""
+                        showAddDialog = true
+                    },
+                    modifier = Modifier.size(36.dp),
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = DarkSurface)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Account", tint = PrimaryPurple, modifier = Modifier.size(20.dp))
+                }
+                
+                IconButton(
+                    onClick = {
+                        renameAccountName = activeAccount?.name ?: ""
+                        showRenameDialog = true
+                    },
+                    enabled = activeAccount != null,
+                    modifier = Modifier.size(36.dp),
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = DarkSurface)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Rename Account", tint = SecondaryTeal, modifier = Modifier.size(18.dp))
+                }
+                
+                IconButton(
+                    onClick = { showDeleteConfirm = true },
+                    enabled = accounts.size > 1,
+                    modifier = Modifier.size(36.dp),
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = DarkSurface)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete Account", tint = BreakRed, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+    }
+    
+    // Add Account Dialog
+    if (showAddDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            title = { Text("Add New Account", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = newAccountName,
+                    onValueChange = { newAccountName = it },
+                    label = { Text("Account Name", color = TextMuted) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedBorderColor = PrimaryPurple,
+                        unfocusedBorderColor = DarkBorder,
+                        focusedContainerColor = DarkSurface,
+                        unfocusedContainerColor = DarkSurface
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newAccountName.isNotBlank()) {
+                            viewModel.addAccount(newAccountName)
+                            showAddDialog = false
+                        }
+                    }
+                ) {
+                    Text("Add", color = PrimaryPurple)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddDialog = false }) {
+                    Text("Cancel", color = TextMuted)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+    
+    // Rename Account Dialog
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("Rename Account", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = renameAccountName,
+                    onValueChange = { renameAccountName = it },
+                    label = { Text("Account Name", color = TextMuted) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedBorderColor = PrimaryPurple,
+                        unfocusedBorderColor = DarkBorder,
+                        focusedContainerColor = DarkSurface,
+                        unfocusedContainerColor = DarkSurface
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (renameAccountName.isNotBlank()) {
+                            viewModel.renameAccount(activeIndex, renameAccountName)
+                            showRenameDialog = false
+                        }
+                    }
+                ) {
+                    Text("Rename", color = PrimaryPurple)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text("Cancel", color = TextMuted)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+    
+    // Delete Account Dialog
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Account?", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete account \"${activeAccount?.name}\"? All of its characters and history will be permanently deleted.",
+                    color = TextPrimary,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAccount(activeIndex)
+                        showDeleteConfirm = false
+                    }
+                ) {
+                    Text("Delete", color = BreakRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel", color = TextMuted)
+                }
+            },
+            containerColor = DarkSurface
+        )
     }
 }

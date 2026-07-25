@@ -22,6 +22,12 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     private val sharedPrefs = application.getSharedPreferences("msm_helper_prefs", Context.MODE_PRIVATE)
     val googleDriveSyncManager = GoogleDriveSyncManager(application)
 
+    private val _accounts = MutableStateFlow<List<com.gcirl.msmhelper.data.Account>>(emptyList())
+    val accounts: StateFlow<List<com.gcirl.msmhelper.data.Account>> = _accounts.asStateFlow()
+
+    private val _activeAccountIndex = MutableStateFlow(0)
+    val activeAccountIndex: StateFlow<Int> = _activeAccountIndex.asStateFlow()
+
     // Main states
     private val _characters = MutableStateFlow<List<Character>>(emptyList())
     val characters: StateFlow<List<Character>> = _characters.asStateFlow()
@@ -120,7 +126,37 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // --- Persist Data ---
+    private fun saveCurrentAccountStateToStateList() {
+        val list = _accounts.value.toMutableList()
+        val index = _activeAccountIndex.value
+        if (list.isEmpty()) {
+            list.add(
+                com.gcirl.msmhelper.data.Account(
+                    name = "Account 1",
+                    characters = _characters.value,
+                    activeCharIndex = _activeCharIndex.value,
+                    necroHistory = _necroHistory.value,
+                    weaponPoolInput = _weaponPoolInput.value,
+                    armorPoolInput = _armorPoolInput.value,
+                    sharedPoolInput = _sharedPoolInput.value
+                )
+            )
+        } else if (index in list.indices) {
+            val original = list[index]
+            list[index] = original.copy(
+                characters = _characters.value,
+                activeCharIndex = _activeCharIndex.value,
+                necroHistory = _necroHistory.value,
+                weaponPoolInput = _weaponPoolInput.value,
+                armorPoolInput = _armorPoolInput.value,
+                sharedPoolInput = _sharedPoolInput.value
+            )
+        }
+        _accounts.value = list
+    }
+
     private fun saveData() {
+        saveCurrentAccountStateToStateList()
         val state = MSMAppState(
             characters = _characters.value,
             activeCharIndex = _activeCharIndex.value,
@@ -129,7 +165,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             bossAccessoryHistory = _bossAccessoryHistory.value,
             calcPresets = _calcPresets.value,
             activePresetIndex = _activePresetIndex.value,
-            selectedTab = _selectedTab.value
+            selectedTab = _selectedTab.value,
+            accounts = _accounts.value,
+            activeAccountIndex = _activeAccountIndex.value
         )
         try {
             val jsonStr = jsonParser.encodeToString(state)
@@ -169,9 +207,6 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         if (jsonStr != null) {
             try {
                 val state = jsonParser.decodeFromString<MSMAppState>(jsonStr)
-                _characters.value = state.characters
-                _activeCharIndex.value = state.activeCharIndex
-                _necroHistory.value = state.necroHistory
                 _mastercraftHistory.value = state.mastercraftHistory
                 _bossAccessoryHistory.value = state.bossAccessoryHistory
                 _calcPresets.value = if (state.calcPresets.isEmpty()) {
@@ -181,9 +216,56 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 }
                 _activePresetIndex.value = state.activePresetIndex
                 _selectedTab.value = state.selectedTab
+
+                val loadedAccounts = state.accounts
+                if (loadedAccounts.isEmpty()) {
+                    val defaultAcc = com.gcirl.msmhelper.data.Account(
+                        name = "Account 1",
+                        characters = state.characters,
+                        activeCharIndex = state.activeCharIndex,
+                        necroHistory = state.necroHistory
+                    )
+                    _accounts.value = listOf(defaultAcc)
+                    _activeAccountIndex.value = 0
+                    
+                    _characters.value = state.characters
+                    _activeCharIndex.value = state.activeCharIndex
+                    _necroHistory.value = state.necroHistory
+                    _weaponPoolInput.value = ""
+                    _armorPoolInput.value = ""
+                    _sharedPoolInput.value = ""
+                } else {
+                    _accounts.value = loadedAccounts
+                    val activeIdx = if (state.activeAccountIndex in loadedAccounts.indices) state.activeAccountIndex else 0
+                    _activeAccountIndex.value = activeIdx
+                    
+                    val activeAcc = loadedAccounts[activeIdx]
+                    _characters.value = activeAcc.characters
+                    _activeCharIndex.value = activeAcc.activeCharIndex
+                    _necroHistory.value = activeAcc.necroHistory
+                    _weaponPoolInput.value = activeAcc.weaponPoolInput
+                    _armorPoolInput.value = activeAcc.armorPoolInput
+                    _sharedPoolInput.value = activeAcc.sharedPoolInput
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        } else {
+            val defaultAcc = com.gcirl.msmhelper.data.Account(
+                name = "Account 1",
+                characters = emptyList(),
+                activeCharIndex = 0,
+                necroHistory = emptyList()
+            )
+            _accounts.value = listOf(defaultAcc)
+            _activeAccountIndex.value = 0
+            
+            _characters.value = emptyList()
+            _activeCharIndex.value = 0
+            _necroHistory.value = emptyList()
+            _weaponPoolInput.value = ""
+            _armorPoolInput.value = ""
+            _sharedPoolInput.value = ""
         }
     }
 
@@ -285,6 +367,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
 
     // --- Import / Export ---
     fun exportBackupJson(): String {
+        saveCurrentAccountStateToStateList()
         val state = MSMAppState(
             characters = _characters.value,
             activeCharIndex = _activeCharIndex.value,
@@ -293,7 +376,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             bossAccessoryHistory = _bossAccessoryHistory.value,
             calcPresets = _calcPresets.value,
             activePresetIndex = _activePresetIndex.value,
-            selectedTab = _selectedTab.value
+            selectedTab = _selectedTab.value,
+            accounts = _accounts.value,
+            activeAccountIndex = _activeAccountIndex.value
         )
         return try {
             jsonParser.encodeToString(state)
@@ -305,11 +390,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     fun importBackupJson(jsonStr: String): Boolean {
         val trimmed = jsonStr.trim()
         return try {
-            // 1. Try decoding as full MSMAppState
             val state = jsonParser.decodeFromString<MSMAppState>(trimmed)
-            _characters.value = state.characters
-            _activeCharIndex.value = state.activeCharIndex
-            _necroHistory.value = state.necroHistory
             _mastercraftHistory.value = state.mastercraftHistory
             _bossAccessoryHistory.value = state.bossAccessoryHistory
             _calcPresets.value = if (state.calcPresets.isEmpty()) {
@@ -319,11 +400,41 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             }
             _activePresetIndex.value = state.activePresetIndex
             _selectedTab.value = state.selectedTab
+
+            val loadedAccounts = state.accounts
+            if (loadedAccounts.isEmpty()) {
+                val defaultAcc = com.gcirl.msmhelper.data.Account(
+                    name = "Account 1",
+                    characters = state.characters,
+                    activeCharIndex = state.activeCharIndex,
+                    necroHistory = state.necroHistory
+                )
+                _accounts.value = listOf(defaultAcc)
+                _activeAccountIndex.value = 0
+                
+                _characters.value = state.characters
+                _activeCharIndex.value = state.activeCharIndex
+                _necroHistory.value = state.necroHistory
+                _weaponPoolInput.value = ""
+                _armorPoolInput.value = ""
+                _sharedPoolInput.value = ""
+            } else {
+                _accounts.value = loadedAccounts
+                val activeIdx = if (state.activeAccountIndex in loadedAccounts.indices) state.activeAccountIndex else 0
+                _activeAccountIndex.value = activeIdx
+                
+                val activeAcc = loadedAccounts[activeIdx]
+                _characters.value = activeAcc.characters
+                _activeCharIndex.value = activeAcc.activeCharIndex
+                _necroHistory.value = activeAcc.necroHistory
+                _weaponPoolInput.value = activeAcc.weaponPoolInput
+                _armorPoolInput.value = activeAcc.armorPoolInput
+                _sharedPoolInput.value = activeAcc.sharedPoolInput
+            }
             saveData()
             true
         } catch (e1: Exception) {
             try {
-                // 2. Fallback to decoding as List<Character> (web backup format)
                 val charactersList = jsonParser.decodeFromString<List<Character>>(trimmed)
                 _characters.value = charactersList
                 _activeCharIndex.value = 0
@@ -332,6 +443,16 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 _bossAccessoryHistory.value = emptyList()
                 _calcPresets.value = listOf(CalcPreset(name = "Default Preset"))
                 _activePresetIndex.value = 0
+                
+                val defaultAcc = com.gcirl.msmhelper.data.Account(
+                    name = "Account 1",
+                    characters = charactersList,
+                    activeCharIndex = 0,
+                    necroHistory = emptyList()
+                )
+                _accounts.value = listOf(defaultAcc)
+                _activeAccountIndex.value = 0
+                
                 saveData()
                 true
             } catch (e2: Exception) {
@@ -816,6 +937,74 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         if (index != -1) {
             history.removeAt(index)
             _mastercraftHistory.value = history
+            saveData()
+        }
+    }
+
+    // --- Multiple Accounts Actions ---
+    fun selectAccount(index: Int) {
+        val list = _accounts.value
+        if (index in list.indices) {
+            saveCurrentAccountStateToStateList()
+            
+            _activeAccountIndex.value = index
+            val nextAccount = list[index]
+            _characters.value = nextAccount.characters
+            _activeCharIndex.value = nextAccount.activeCharIndex
+            _necroHistory.value = nextAccount.necroHistory
+            _weaponPoolInput.value = nextAccount.weaponPoolInput
+            _armorPoolInput.value = nextAccount.armorPoolInput
+            _sharedPoolInput.value = nextAccount.sharedPoolInput
+            
+            saveData()
+        }
+    }
+
+    fun addAccount(name: String) {
+        if (name.isBlank()) return
+        saveCurrentAccountStateToStateList()
+        
+        val newAcc = com.gcirl.msmhelper.data.Account(
+            name = name.trim(),
+            characters = emptyList(),
+            activeCharIndex = 0,
+            necroHistory = emptyList(),
+            weaponPoolInput = "",
+            armorPoolInput = "",
+            sharedPoolInput = ""
+        )
+        
+        val newList = _accounts.value + newAcc
+        _accounts.value = newList
+        selectAccount(newList.lastIndex)
+    }
+
+    fun renameAccount(index: Int, newName: String) {
+        if (newName.isBlank()) return
+        val list = _accounts.value.toMutableList()
+        if (index in list.indices) {
+            list[index] = list[index].copy(name = newName.trim())
+            _accounts.value = list
+            saveData()
+        }
+    }
+
+    fun deleteAccount(index: Int) {
+        val list = _accounts.value.toMutableList()
+        if (list.size > 1 && index in list.indices) {
+            list.removeAt(index)
+            _accounts.value = list
+            val nextActiveIndex = if (_activeAccountIndex.value >= list.size) 0 else _activeAccountIndex.value
+            _activeAccountIndex.value = nextActiveIndex
+            
+            val nextAccount = list[nextActiveIndex]
+            _characters.value = nextAccount.characters
+            _activeCharIndex.value = nextAccount.activeCharIndex
+            _necroHistory.value = nextAccount.necroHistory
+            _weaponPoolInput.value = nextAccount.weaponPoolInput
+            _armorPoolInput.value = nextAccount.armorPoolInput
+            _sharedPoolInput.value = nextAccount.sharedPoolInput
+            
             saveData()
         }
     }
