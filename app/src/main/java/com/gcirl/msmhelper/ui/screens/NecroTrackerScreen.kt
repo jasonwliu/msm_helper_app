@@ -12,9 +12,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
@@ -869,6 +872,7 @@ fun DailyTrackerTab(
 fun OverviewTab(viewModel: MSMHelperViewModel) {
     val characters by viewModel.characters.collectAsState()
     val context = LocalContext.current
+    var isReorderMode by remember { mutableStateOf(false) }
 
     // Dialog state
     var charToDeleteIndex by remember { mutableIntStateOf(-1) }
@@ -909,6 +913,34 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Toggle Switch for Rearrange Mode
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Rearrange Mode",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Switch(
+                    checked = isReorderMode,
+                    onCheckedChange = { isReorderMode = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = PrimaryPurple,
+                        checkedTrackColor = PrimaryPurple.copy(alpha = 0.5f),
+                        uncheckedThumbColor = TextMuted,
+                        uncheckedTrackColor = DarkBorder
+                    )
+                )
+            }
+        }
+
         // Character list
         itemsIndexed(characters) { index, char ->
             val wStones = char.weapon / 150
@@ -960,7 +992,8 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                                     },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.width(80.dp),
-                                    textStyle = TextStyle(fontSize = 14.sp, color = TextPrimary)
+                                    textStyle = TextStyle(fontSize = 14.sp, color = TextPrimary),
+                                    enabled = !isReorderMode
                                 )
                                 Text(
                                     text = "($wStones St, $wRem/150)",
@@ -995,7 +1028,8 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                                     },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.width(80.dp),
-                                    textStyle = TextStyle(fontSize = 14.sp, color = TextPrimary)
+                                    textStyle = TextStyle(fontSize = 14.sp, color = TextPrimary),
+                                    enabled = !isReorderMode
                                 )
                                 Text(
                                     text = "($aStones St, $aRem/150)",
@@ -1006,30 +1040,50 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                         }
                     }
 
-                    // Actions Column (Up, Down, Delete)
+                    // Actions Column (Drag Handle & Delete)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.align(Alignment.CenterVertically)
                     ) {
-                        IconButton(
-                            onClick = { viewModel.moveCharacter(index, "up") },
-                            enabled = index > 0
-                        ) {
+                        if (isReorderMode) {
+                            var dragAccumulatedOffset by remember { mutableStateOf(0f) }
                             Icon(
-                                imageVector = Icons.Default.KeyboardArrowUp,
-                                contentDescription = "Move character up",
-                                tint = if (index > 0) PrimaryPurple else TextMuted.copy(alpha = 0.3f)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { viewModel.moveCharacter(index, "down") },
-                            enabled = index < characters.size - 1
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Move character down",
-                                tint = if (index < characters.size - 1) PrimaryPurple else TextMuted.copy(alpha = 0.3f)
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Drag to reorder",
+                                tint = PrimaryPurple,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .padding(4.dp)
+                                    .pointerInput(index) {
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                dragAccumulatedOffset = 0f
+                                            },
+                                            onDragEnd = {
+                                                dragAccumulatedOffset = 0f
+                                            },
+                                            onDragCancel = {
+                                                dragAccumulatedOffset = 0f
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragAccumulatedOffset += dragAmount.y
+                                                val threshold = 120f // drag sensitivity threshold in pixels
+                                                if (dragAccumulatedOffset > threshold) {
+                                                    if (index < characters.size - 1) {
+                                                        viewModel.moveCharacter(index, "down")
+                                                    }
+                                                    dragAccumulatedOffset = 0f
+                                                } else if (dragAccumulatedOffset < -threshold) {
+                                                    if (index > 0) {
+                                                        viewModel.moveCharacter(index, "up")
+                                                    }
+                                                    dragAccumulatedOffset = 0f
+                                                }
+                                            }
+                                        )
+                                    }
                             )
                         }
 
