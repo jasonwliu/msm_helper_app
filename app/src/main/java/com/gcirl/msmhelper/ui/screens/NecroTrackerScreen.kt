@@ -15,6 +15,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
@@ -1004,15 +1006,42 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                         }
                     }
 
-                    // Delete button
-                    IconButton(
-                        onClick = { charToDeleteIndex = index }
+                    // Actions Column (Up, Down, Delete)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete character",
-                            tint = BreakRed
-                        )
+                        IconButton(
+                            onClick = { viewModel.moveCharacter(index, "up") },
+                            enabled = index > 0
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowUp,
+                                contentDescription = "Move character up",
+                                tint = if (index > 0) PrimaryPurple else TextMuted.copy(alpha = 0.3f)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { viewModel.moveCharacter(index, "down") },
+                            enabled = index < characters.size - 1
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Move character down",
+                                tint = if (index < characters.size - 1) PrimaryPurple else TextMuted.copy(alpha = 0.3f)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { charToDeleteIndex = index }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete character",
+                                tint = BreakRed
+                            )
+                        }
                     }
                 }
             }

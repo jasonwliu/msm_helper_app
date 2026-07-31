@@ -1008,4 +1008,26 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             saveData()
         }
     }
+
+    fun moveCharacter(index: Int, direction: String) {
+        val list = _characters.value.toMutableList()
+        if (index in list.indices) {
+            val targetIndex = if (direction == "up") index - 1 else index + 1
+            if (targetIndex in list.indices) {
+                val temp = list[index]
+                list[index] = list[targetIndex]
+                list[targetIndex] = temp
+                _characters.value = list
+                
+                val currentActive = _activeCharIndex.value
+                if (currentActive == index) {
+                    _activeCharIndex.value = targetIndex
+                } else if (currentActive == targetIndex) {
+                    _activeCharIndex.value = index
+                }
+                
+                saveData()
+            }
+        }
+    }
 }
