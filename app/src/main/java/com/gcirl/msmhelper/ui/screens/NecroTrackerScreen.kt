@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.input.pointer.pointerInput
@@ -901,14 +902,14 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                     val speed = (diff / threshold * scrollSpeed).coerceAtLeast(5f)
                     lazyListState.scrollBy(-speed)
                     if (draggedIndex != null) {
-                        draggedOffset += speed
+                        draggedOffset -= speed
                     }
                 } else if (touchY > columnBottom - threshold) {
                     val diff = touchY - (columnBottom - threshold)
                     val speed = (diff / threshold * scrollSpeed).coerceAtLeast(5f)
                     lazyListState.scrollBy(speed)
                     if (draggedIndex != null) {
-                        draggedOffset -= speed
+                        draggedOffset += speed
                     }
                 }
                 
@@ -1017,7 +1018,7 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                     }
                     .pointerInput(char.name, isReorderMode) {
                         if (!isReorderMode) return@pointerInput
-                        detectDragGestures(
+                        detectDragGesturesAfterLongPress(
                             onDragStart = { offset ->
                                 val currentIndex = characters.indexOfFirst { it.name == char.name }
                                 if (currentIndex != -1) {
