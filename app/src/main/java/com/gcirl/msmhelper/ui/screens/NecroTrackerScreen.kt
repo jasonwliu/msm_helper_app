@@ -13,7 +13,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
@@ -874,6 +880,42 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
     val context = LocalContext.current
     var isReorderMode by remember { mutableStateOf(false) }
 
+    val lazyListState = rememberLazyListState()
+    var columnTop by remember { mutableStateOf(0f) }
+    var columnBottom by remember { mutableStateOf(0f) }
+    var globalTouchY by remember { mutableStateOf<Float?>(null) }
+    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    var draggedOffset by remember { mutableStateOf(0f) }
+    var itemHeightPx by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(globalTouchY, isReorderMode) {
+        if (isReorderMode && globalTouchY != null) {
+            while (true) {
+                val touchY = globalTouchY ?: break
+                val threshold = 150f // pixels from top/bottom
+                val scrollSpeed = 15f // pixels to scroll per frame
+                
+                if (touchY < columnTop + threshold) {
+                    val diff = (columnTop + threshold) - touchY
+                    val speed = (diff / threshold * scrollSpeed).coerceAtLeast(5f)
+                    lazyListState.scrollBy(-speed)
+                    if (draggedIndex != null) {
+                        draggedOffset += speed
+                    }
+                } else if (touchY > columnBottom - threshold) {
+                    val diff = touchY - (columnBottom - threshold)
+                    val speed = (diff / threshold * scrollSpeed).coerceAtLeast(5f)
+                    lazyListState.scrollBy(speed)
+                    if (draggedIndex != null) {
+                        draggedOffset -= speed
+                    }
+                }
+                
+                delay(16)
+            }
+        }
+    }
+
     // Dialog state
     var charToDeleteIndex by remember { mutableIntStateOf(-1) }
 
@@ -908,9 +950,14 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
     }
 
     LazyColumn(
+        state = lazyListState,
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .onGloballyPositioned { coordinates ->
+                columnTop = coordinates.positionInWindow().y
+                columnBottom = columnTop + coordinates.size.height
+            },
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Toggle Switch for Rearrange Mode
@@ -948,10 +995,83 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
             val aStones = char.armor / 150
             val aRem = char.armor % 150
 
+            var cardCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+            val isDragged = draggedIndex == index
+
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        translationY = if (isDragged) draggedOffset else 0f
+                        scaleX = if (isDragged) 1.03f else 1.0f
+                        scaleY = if (isDragged) 1.03f else 1.0f
+                        shadowElevation = if (isDragged) 8f else 0f
+                    }
+                    .onGloballyPositioned { coords ->
+                        cardCoordinates = coords
+                        if (isDragged) {
+                            itemHeightPx = coords.size.height.toFloat()
+                        }
+                    }
+                    .pointerInput(char.name, isReorderMode) {
+                        if (!isReorderMode) return@pointerInput
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val currentIndex = characters.indexOfFirst { it.name == char.name }
+                                if (currentIndex != -1) {
+                                    draggedIndex = currentIndex
+                                    draggedOffset = 0f
+                                    cardCoordinates?.let { coords ->
+                                        if (coords.isAttached) {
+                                            globalTouchY = coords.positionInWindow().y + offset.y
+                                        }
+                                    }
+                                }
+                            },
+                            onDragEnd = {
+                                draggedIndex = null
+                                globalTouchY = null
+                            },
+                            onDragCancel = {
+                                draggedIndex = null
+                                globalTouchY = null
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val currentIndex = characters.indexOfFirst { it.name == char.name }
+                                if (currentIndex != -1) {
+                                    draggedOffset += dragAmount.y
+                                    
+                                    cardCoordinates?.let { coords ->
+                                        if (coords.isAttached) {
+                                            globalTouchY = coords.positionInWindow().y + change.position.y
+                                        }
+                                    }
+                                    
+                                    val density = context.resources.displayMetrics.density
+                                    val spacingPx = 16f * density
+                                    val step = itemHeightPx + spacingPx
+                                    val threshold = step * 0.5f
+                                    
+                                    if (draggedOffset > threshold) {
+                                        if (currentIndex < characters.size - 1) {
+                                            viewModel.moveCharacter(currentIndex, "down")
+                                            draggedIndex = currentIndex + 1
+                                            draggedOffset -= step
+                                        }
+                                    } else if (draggedOffset < -threshold) {
+                                        if (currentIndex > 0) {
+                                            viewModel.moveCharacter(currentIndex, "up")
+                                            draggedIndex = currentIndex - 1
+                                            draggedOffset += step
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    },
                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                border = BorderStroke(1.dp, DarkBorder)
+                border = BorderStroke(1.dp, if (isDragged) PrimaryPurple else DarkBorder)
             ) {
                 Row(
                     modifier = Modifier
@@ -1040,53 +1160,12 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                         }
                     }
 
-                    // Actions Column (Drag Handle & Delete)
+                    // Actions Column (Delete button)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.Center,
                         modifier = Modifier.align(Alignment.CenterVertically)
                     ) {
-                        if (isReorderMode) {
-                            var dragAccumulatedOffset by remember { mutableStateOf(0f) }
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Drag to reorder",
-                                tint = PrimaryPurple,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .padding(4.dp)
-                                    .pointerInput(index) {
-                                        detectDragGestures(
-                                            onDragStart = {
-                                                dragAccumulatedOffset = 0f
-                                            },
-                                            onDragEnd = {
-                                                dragAccumulatedOffset = 0f
-                                            },
-                                            onDragCancel = {
-                                                dragAccumulatedOffset = 0f
-                                            },
-                                            onDrag = { change, dragAmount ->
-                                                change.consume()
-                                                dragAccumulatedOffset += dragAmount.y
-                                                val threshold = 120f // drag sensitivity threshold in pixels
-                                                if (dragAccumulatedOffset > threshold) {
-                                                    if (index < characters.size - 1) {
-                                                        viewModel.moveCharacter(index, "down")
-                                                    }
-                                                    dragAccumulatedOffset = 0f
-                                                } else if (dragAccumulatedOffset < -threshold) {
-                                                    if (index > 0) {
-                                                        viewModel.moveCharacter(index, "up")
-                                                    }
-                                                    dragAccumulatedOffset = 0f
-                                                }
-                                            }
-                                        )
-                                    }
-                            )
-                        }
-
                         IconButton(
                             onClick = { charToDeleteIndex = index }
                         ) {
