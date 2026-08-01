@@ -888,7 +888,7 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
     var globalTouchY by remember { mutableStateOf<Float?>(null) }
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var draggedOffset by remember { mutableStateOf(0f) }
-    var itemHeightPx by remember { mutableStateOf(0f) }
+    var itemHeightPx by remember { mutableStateOf(400f) }
 
     LaunchedEffect(globalTouchY, isReorderMode) {
         if (isReorderMode && globalTouchY != null) {
@@ -1036,9 +1036,7 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                     }
                     .onGloballyPositioned { coords ->
                         cardCoordinates = coords
-                        if (isDragged) {
-                            itemHeightPx = coords.size.height.toFloat()
-                        }
+                        itemHeightPx = coords.size.height.toFloat()
                     }
                     .pointerInput(char.name, isReorderMode) {
                         if (!isReorderMode) return@pointerInput
@@ -1068,12 +1066,7 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                                 val currentIndex = characters.indexOfFirst { it.name == char.name }
                                 if (currentIndex != -1) {
                                     draggedOffset += dragAmount.y
-                                    
-                                    cardCoordinates?.let { coords ->
-                                        if (coords.isAttached) {
-                                            globalTouchY = coords.positionInWindow().y + change.position.y
-                                        }
-                                    }
+                                    globalTouchY = (globalTouchY ?: 0f) + dragAmount.y
                                 }
                             }
                         )
