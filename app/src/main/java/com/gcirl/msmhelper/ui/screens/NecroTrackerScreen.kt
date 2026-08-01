@@ -19,6 +19,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -989,7 +990,7 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
         }
 
         // Character list
-        itemsIndexed(characters) { index, char ->
+        itemsIndexed(characters, key = { _, char -> char.name }) { index, char ->
             val wStones = char.weapon / 150
             val wRem = char.weapon % 150
             val aStones = char.armor / 150
@@ -1001,6 +1002,7 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .zIndex(if (isDragged) 1f else 0f)
                     .graphicsLayer {
                         translationY = if (isDragged) draggedOffset else 0f
                         scaleX = if (isDragged) 1.03f else 1.0f
