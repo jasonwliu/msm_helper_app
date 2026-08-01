@@ -918,6 +918,30 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
         }
     }
 
+    LaunchedEffect(draggedOffset, draggedIndex, characters) {
+        val currIdx = draggedIndex
+        if (currIdx != null && currIdx in characters.indices) {
+            val density = context.resources.displayMetrics.density
+            val spacingPx = 16f * density
+            val step = itemHeightPx + spacingPx
+            val threshold = step * 0.5f
+            
+            if (draggedOffset > threshold) {
+                if (currIdx < characters.size - 1) {
+                    viewModel.moveCharacter(currIdx, "down")
+                    draggedIndex = currIdx + 1
+                    draggedOffset -= step
+                }
+            } else if (draggedOffset < -threshold) {
+                if (currIdx > 0) {
+                    viewModel.moveCharacter(currIdx, "up")
+                    draggedIndex = currIdx - 1
+                    draggedOffset += step
+                }
+            }
+        }
+    }
+
     // Dialog state
     var charToDeleteIndex by remember { mutableIntStateOf(-1) }
 
@@ -1048,25 +1072,6 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                                     cardCoordinates?.let { coords ->
                                         if (coords.isAttached) {
                                             globalTouchY = coords.positionInWindow().y + change.position.y
-                                        }
-                                    }
-                                    
-                                    val density = context.resources.displayMetrics.density
-                                    val spacingPx = 16f * density
-                                    val step = itemHeightPx + spacingPx
-                                    val threshold = step * 0.5f
-                                    
-                                    if (draggedOffset > threshold) {
-                                        if (currentIndex < characters.size - 1) {
-                                            viewModel.moveCharacter(currentIndex, "down")
-                                            draggedIndex = currentIndex + 1
-                                            draggedOffset -= step
-                                        }
-                                    } else if (draggedOffset < -threshold) {
-                                        if (currentIndex > 0) {
-                                            viewModel.moveCharacter(currentIndex, "up")
-                                            draggedIndex = currentIndex - 1
-                                            draggedOffset += step
                                         }
                                     }
                                 }
