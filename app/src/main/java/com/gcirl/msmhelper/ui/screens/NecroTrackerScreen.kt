@@ -900,16 +900,16 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                 if (touchY < columnTop + threshold) {
                     val diff = (columnTop + threshold) - touchY
                     val speed = (diff / threshold * scrollSpeed).coerceAtLeast(5f)
-                    lazyListState.scrollBy(-speed)
+                    val consumed = lazyListState.scrollBy(-speed)
                     if (draggedIndex != null) {
-                        draggedOffset -= speed
+                        draggedOffset += consumed
                     }
                 } else if (touchY > columnBottom - threshold) {
                     val diff = touchY - (columnBottom - threshold)
                     val speed = (diff / threshold * scrollSpeed).coerceAtLeast(5f)
-                    lazyListState.scrollBy(speed)
+                    val consumed = lazyListState.scrollBy(speed)
                     if (draggedIndex != null) {
-                        draggedOffset += speed
+                        draggedOffset += consumed
                     }
                 }
                 
