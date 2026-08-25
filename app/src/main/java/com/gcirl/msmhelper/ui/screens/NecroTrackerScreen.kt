@@ -225,13 +225,13 @@ fun DailyTrackerTab(
                                 Card(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable(enabled = isWeekend) { viewModel.handleTypeClick("weapon") },
+                                        .clickable { viewModel.handleTypeClick("weapon") },
                                     colors = CardDefaults.cardColors(
                                         containerColor = if (isWpnActive) WeaponPinkAlpha else DarkSurfaceVariant
                                     ),
                                     border = BorderStroke(
                                         1.dp,
-                                        if (isWpnActive) WeaponPink else if (isWeekend) DarkBorder.copy(alpha = 0.5f) else Color.Transparent
+                                        if (isWpnActive) WeaponPink else DarkBorder.copy(alpha = 0.5f)
                                     )
                                 ) {
                                     Column(
@@ -261,13 +261,13 @@ fun DailyTrackerTab(
                                 Card(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable(enabled = isWeekend) { viewModel.handleTypeClick("armor") },
+                                        .clickable { viewModel.handleTypeClick("armor") },
                                     colors = CardDefaults.cardColors(
                                         containerColor = if (isArmActive) ArmorBlueAlpha else DarkSurfaceVariant
                                     ),
                                     border = BorderStroke(
                                         1.dp,
-                                        if (isArmActive) ArmorBlue else if (isWeekend) DarkBorder.copy(alpha = 0.5f) else Color.Transparent
+                                        if (isArmActive) ArmorBlue else DarkBorder.copy(alpha = 0.5f)
                                     )
                                 ) {
                                     Column(
@@ -627,13 +627,13 @@ fun DailyTrackerTab(
                         Card(
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable(enabled = isWeekend) { viewModel.handleTypeClick("weapon") },
+                                .clickable { viewModel.handleTypeClick("weapon") },
                             colors = CardDefaults.cardColors(
                                 containerColor = if (isWpnActive) WeaponPinkAlpha else DarkSurfaceVariant
                             ),
                             border = BorderStroke(
                                 1.dp,
-                                if (isWpnActive) WeaponPink else if (isWeekend) DarkBorder.copy(alpha = 0.5f) else Color.Transparent
+                                if (isWpnActive) WeaponPink else DarkBorder.copy(alpha = 0.5f)
                             )
                         ) {
                             Column(
@@ -663,13 +663,13 @@ fun DailyTrackerTab(
                         Card(
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable(enabled = isWeekend) { viewModel.handleTypeClick("armor") },
+                                .clickable { viewModel.handleTypeClick("armor") },
                             colors = CardDefaults.cardColors(
                                 containerColor = if (isArmActive) ArmorBlueAlpha else DarkSurfaceVariant
                             ),
                             border = BorderStroke(
                                 1.dp,
-                                if (isArmActive) ArmorBlue else if (isWeekend) DarkBorder.copy(alpha = 0.5f) else Color.Transparent
+                                if (isArmActive) ArmorBlue else DarkBorder.copy(alpha = 0.5f)
                             )
                         ) {
                             Column(

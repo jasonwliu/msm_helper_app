@@ -478,7 +478,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun handleTypeClick(type: String) {
-        if (isWeekend()) {
+        if (_trackedTypeOverride.value == type) {
+            _trackedTypeOverride.value = null
+        } else {
             _trackedTypeOverride.value = type
         }
     }
