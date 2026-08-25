@@ -467,14 +467,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         // If manual override is active, use it
         _trackedTypeOverride.value?.let { return it }
 
-        // Otherwise auto-detect: Tue/Thu is weapon, other days is armor
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT-8"))
-        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-        return if (dayOfWeek == Calendar.TUESDAY || dayOfWeek == Calendar.THURSDAY) {
-            "weapon"
-        } else {
-            "armor"
-        }
+        // Default to armor pieces for all days
+        return "armor"
     }
 
     fun isWeekend(): Boolean {
@@ -496,13 +490,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     fun getDayLabel(): String {
         val isAuto = _trackedTypeOverride.value == null
         val typeLabel = if (getTrackedType() == "weapon") "WEAPON" else "ARMOR"
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT-8"))
-        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
         return when {
             !isAuto -> "Manual Override: Tracking $typeLabel Pieces"
             isWeekend() -> "Today is Weekend (Server Time): Tracking $typeLabel Pieces"
-            dayOfWeek in listOf(Calendar.TUESDAY, Calendar.THURSDAY) -> 
-                "Today is Tuesday/Thursday (Server Time): Tracking $typeLabel Pieces"
             else -> "Today (Server Time): Tracking $typeLabel Pieces"
         }
     }

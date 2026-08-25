@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +35,13 @@ fun MastercraftStatsScreen(viewModel: MSMHelperViewModel) {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     var showConfirmClear by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+
+    val filteredHistory = if (selectedCategory != null) {
+        history.filter { it.gearType == selectedCategory }
+    } else {
+        history
+    }
 
     // Computations
     val totalAttempts = history.size
@@ -96,11 +104,25 @@ fun MastercraftStatsScreen(viewModel: MSMHelperViewModel) {
 
     // Helper to render stats breakdown row
     @Composable
-    fun GearBreakdownItem(type: String, attempts: Int, success: Int, fail: Int, actual: Double, expected: Double) {
+    fun GearBreakdownItem(
+        type: String,
+        attempts: Int,
+        success: Int,
+        fail: Int,
+        actual: Double,
+        expected: Double,
+        isSelected: Boolean,
+        onClick: () -> Unit
+    ) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            border = BorderStroke(1.dp, DarkBorder)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .clickable { onClick() },
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected) DarkSurfaceVariant else DarkSurface
+            ),
+            border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, if (isSelected) PrimaryPurple else DarkBorder)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(
@@ -159,9 +181,13 @@ fun MastercraftStatsScreen(viewModel: MSMHelperViewModel) {
                 // Card 1: Core Metrics
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                        border = BorderStroke(1.dp, DarkBorder)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedCategory = null },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (selectedCategory == null) DarkSurfaceVariant else DarkSurface
+                        ),
+                        border = BorderStroke(if (selectedCategory == null) 1.5.dp else 1.dp, if (selectedCategory == null) PrimaryPurple else DarkBorder)
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
@@ -235,7 +261,11 @@ fun MastercraftStatsScreen(viewModel: MSMHelperViewModel) {
                             success = typeSuccesses,
                             fail = typeFailures,
                             actual = typeActual,
-                            expected = typeExpected
+                            expected = typeExpected,
+                            isSelected = selectedCategory == type,
+                            onClick = {
+                                selectedCategory = if (selectedCategory == type) null else type
+                            }
                         )
                     }
                 }
@@ -261,14 +291,32 @@ fun MastercraftStatsScreen(viewModel: MSMHelperViewModel) {
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                Text(
-                    text = "MASTERCRAFTING HISTORY LOG",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextMuted,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (selectedCategory != null) {
+                            "MASTERCRAFTING LOG (${selectedCategory!!.uppercase(Locale.getDefault())})"
+                        } else {
+                            "MASTERCRAFTING HISTORY LOG"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted,
+                        letterSpacing = 1.sp
+                    )
+                    if (selectedCategory != null) {
+                        TextButton(
+                            onClick = { selectedCategory = null },
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier.height(24.dp)
+                        ) {
+                            Text("Clear Filter", fontSize = 11.sp, color = PrimaryPurple)
+                        }
+                    }
+                }
 
                 LazyColumn(
                     modifier = Modifier
@@ -278,7 +326,7 @@ fun MastercraftStatsScreen(viewModel: MSMHelperViewModel) {
                         .padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(history) { run ->
+                    items(filteredHistory) { run ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -345,9 +393,13 @@ fun MastercraftStatsScreen(viewModel: MSMHelperViewModel) {
             // Card 1: Core Metrics
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                    border = BorderStroke(1.dp, DarkBorder)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selectedCategory = null },
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedCategory == null) DarkSurfaceVariant else DarkSurface
+                    ),
+                    border = BorderStroke(if (selectedCategory == null) 1.5.dp else 1.dp, if (selectedCategory == null) PrimaryPurple else DarkBorder)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
@@ -420,25 +472,47 @@ fun MastercraftStatsScreen(viewModel: MSMHelperViewModel) {
                         success = typeSuccesses,
                         fail = typeFailures,
                         actual = typeActual,
-                        expected = typeExpected
+                        expected = typeExpected,
+                        isSelected = selectedCategory == type,
+                        onClick = {
+                            selectedCategory = if (selectedCategory == type) null else type
+                        }
                     )
                 }
             }
 
             // History Log header
             item {
-                Text(
-                    text = "MASTERCRAFTING HISTORY LOG",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextMuted,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (selectedCategory != null) {
+                            "MASTERCRAFTING LOG (${selectedCategory!!.uppercase(Locale.getDefault())})"
+                        } else {
+                            "MASTERCRAFTING HISTORY LOG"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted,
+                        letterSpacing = 1.sp
+                    )
+                    if (selectedCategory != null) {
+                        TextButton(
+                            onClick = { selectedCategory = null },
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier.height(24.dp)
+                        ) {
+                            Text("Clear Filter", fontSize = 11.sp, color = PrimaryPurple)
+                        }
+                    }
+                }
             }
 
             // History items
-            items(history) { run ->
+            items(filteredHistory) { run ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
