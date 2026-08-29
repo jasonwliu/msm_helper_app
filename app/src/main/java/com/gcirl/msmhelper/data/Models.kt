@@ -87,7 +87,8 @@ data class Account(
     val necroHistory: List<NecroAction> = emptyList(),
     val weaponPoolInput: String = "",
     val armorPoolInput: String = "",
-    val sharedPoolInput: String = ""
+    val sharedPoolInput: String = "",
+    val lastResetDate: String = ""
 )
 
 @Serializable
@@ -101,5 +102,6 @@ data class MSMAppState(
     val activePresetIndex: Int = 0,
     val selectedTab: Int = 0,
     val accounts: List<Account> = emptyList(),
-    val activeAccountIndex: Int = 0
+    val activeAccountIndex: Int = 0,
+    val lastResetDate: String = ""
 )

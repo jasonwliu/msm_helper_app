@@ -64,6 +64,10 @@ fun DailyTrackerTab(
     val trackedType = trackedTypeOverride ?: viewModel.getTrackedType()
     val isWeekend = viewModel.isWeekend()
 
+    LaunchedEffect(Unit) {
+        viewModel.checkAndApplyDailyReset()
+    }
+
     if (characters.isEmpty()) {
         Column(
             modifier = Modifier
@@ -511,6 +515,20 @@ fun DailyTrackerTab(
                                     fontSize = 13.sp
                                 )
                             }
+
+                            if (size > 1 && activeIndex > 0) {
+                                TextButton(
+                                    onClick = { viewModel.restartToTopOfList() },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "Restart to Top of List",
+                                        color = PrimaryPurple,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -868,6 +886,20 @@ fun DailyTrackerTab(
                             text = "Skip Without Adding",
                             fontWeight = FontWeight.Bold
                         )
+                    }
+
+                    if (size > 1 && activeIndex > 0) {
+                        TextButton(
+                            onClick = { viewModel.restartToTopOfList() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Restart to Top of List",
+                                color = PrimaryPurple,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }

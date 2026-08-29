@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import com.gcirl.msmhelper.sync.GoogleDriveSyncManager
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import kotlinx.serialization.encodeToString
@@ -34,6 +36,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _activeCharIndex = MutableStateFlow(0)
     val activeCharIndex: StateFlow<Int> = _activeCharIndex.asStateFlow()
+
+    private val _lastResetDate = MutableStateFlow("")
+    val lastResetDate: StateFlow<String> = _lastResetDate.asStateFlow()
 
     private val _necroHistory = MutableStateFlow<List<NecroAction>>(emptyList())
     val necroHistory: StateFlow<List<NecroAction>> = _necroHistory.asStateFlow()
@@ -122,7 +127,18 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         loadData()
+        checkAndApplyDailyReset()
+        startDailyResetWatcher()
         checkGoogleSignInSilent()
+    }
+
+    private fun startDailyResetWatcher() {
+        viewModelScope.launch {
+            while (isActive) {
+                checkAndApplyDailyReset()
+                delay(30_000)
+            }
+        }
     }
 
     // --- Persist Data ---
@@ -138,7 +154,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                     necroHistory = _necroHistory.value,
                     weaponPoolInput = _weaponPoolInput.value,
                     armorPoolInput = _armorPoolInput.value,
-                    sharedPoolInput = _sharedPoolInput.value
+                    sharedPoolInput = _sharedPoolInput.value,
+                    lastResetDate = _lastResetDate.value
                 )
             )
         } else if (index in list.indices) {
@@ -149,7 +166,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 necroHistory = _necroHistory.value,
                 weaponPoolInput = _weaponPoolInput.value,
                 armorPoolInput = _armorPoolInput.value,
-                sharedPoolInput = _sharedPoolInput.value
+                sharedPoolInput = _sharedPoolInput.value,
+                lastResetDate = _lastResetDate.value
             )
         }
         _accounts.value = list
@@ -167,7 +185,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             activePresetIndex = _activePresetIndex.value,
             selectedTab = _selectedTab.value,
             accounts = _accounts.value,
-            activeAccountIndex = _activeAccountIndex.value
+            activeAccountIndex = _activeAccountIndex.value,
+            lastResetDate = _lastResetDate.value
         )
         try {
             val jsonStr = jsonParser.encodeToString(state)
@@ -223,7 +242,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                         name = "Account 1",
                         characters = state.characters,
                         activeCharIndex = state.activeCharIndex,
-                        necroHistory = state.necroHistory
+                        necroHistory = state.necroHistory,
+                        lastResetDate = state.lastResetDate
                     )
                     _accounts.value = listOf(defaultAcc)
                     _activeAccountIndex.value = 0
@@ -234,6 +254,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                     _weaponPoolInput.value = ""
                     _armorPoolInput.value = ""
                     _sharedPoolInput.value = ""
+                    _lastResetDate.value = state.lastResetDate
                 } else {
                     _accounts.value = loadedAccounts
                     val activeIdx = if (state.activeAccountIndex in loadedAccounts.indices) state.activeAccountIndex else 0
@@ -246,7 +267,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                     _weaponPoolInput.value = activeAcc.weaponPoolInput
                     _armorPoolInput.value = activeAcc.armorPoolInput
                     _sharedPoolInput.value = activeAcc.sharedPoolInput
+                    _lastResetDate.value = if (state.lastResetDate.isNotEmpty()) state.lastResetDate else activeAcc.lastResetDate
                 }
+                checkAndApplyDailyReset()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -255,7 +278,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 name = "Account 1",
                 characters = emptyList(),
                 activeCharIndex = 0,
-                necroHistory = emptyList()
+                necroHistory = emptyList(),
+                lastResetDate = getCurrentServerDate()
             )
             _accounts.value = listOf(defaultAcc)
             _activeAccountIndex.value = 0
@@ -266,6 +290,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             _weaponPoolInput.value = ""
             _armorPoolInput.value = ""
             _sharedPoolInput.value = ""
+            _lastResetDate.value = getCurrentServerDate()
         }
     }
 
@@ -407,7 +432,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                     name = "Account 1",
                     characters = state.characters,
                     activeCharIndex = state.activeCharIndex,
-                    necroHistory = state.necroHistory
+                    necroHistory = state.necroHistory,
+                    lastResetDate = state.lastResetDate
                 )
                 _accounts.value = listOf(defaultAcc)
                 _activeAccountIndex.value = 0
@@ -418,6 +444,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 _weaponPoolInput.value = ""
                 _armorPoolInput.value = ""
                 _sharedPoolInput.value = ""
+                _lastResetDate.value = state.lastResetDate
             } else {
                 _accounts.value = loadedAccounts
                 val activeIdx = if (state.activeAccountIndex in loadedAccounts.indices) state.activeAccountIndex else 0
@@ -430,7 +457,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 _weaponPoolInput.value = activeAcc.weaponPoolInput
                 _armorPoolInput.value = activeAcc.armorPoolInput
                 _sharedPoolInput.value = activeAcc.sharedPoolInput
+                _lastResetDate.value = if (state.lastResetDate.isNotEmpty()) state.lastResetDate else activeAcc.lastResetDate
             }
+            checkAndApplyDailyReset()
             saveData()
             true
         } catch (e1: Exception) {
@@ -448,10 +477,12 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                     name = "Account 1",
                     characters = charactersList,
                     activeCharIndex = 0,
-                    necroHistory = emptyList()
+                    necroHistory = emptyList(),
+                    lastResetDate = getCurrentServerDate()
                 )
                 _accounts.value = listOf(defaultAcc)
                 _activeAccountIndex.value = 0
+                _lastResetDate.value = getCurrentServerDate()
                 
                 saveData()
                 true
@@ -460,6 +491,63 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 false
             }
         }
+    }
+
+    // --- Daily Reset Logic (Server Time: GMT-8, Midnight 00:00) ---
+    fun getCurrentServerDate(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("GMT-8")
+        return sdf.format(Date())
+    }
+
+    fun checkAndApplyDailyReset() {
+        val currentServerDate = getCurrentServerDate()
+        val lastDate = _lastResetDate.value
+
+        if (lastDate.isEmpty()) {
+            val lastAction = _necroHistory.value.firstOrNull()
+            var shouldReset = false
+            if (lastAction != null) {
+                try {
+                    val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                    val actionDate = inputFormat.parse(lastAction.timestamp)
+                    val serverFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+                        timeZone = TimeZone.getTimeZone("GMT-8")
+                    }
+                    val lastActionServerDate = serverFormat.format(actionDate ?: Date())
+                    if (lastActionServerDate != currentServerDate) {
+                        shouldReset = true
+                    }
+                } catch (e: Exception) {
+                    shouldReset = false
+                }
+            }
+            if (shouldReset) {
+                restartToTopOfList(currentServerDate)
+            } else {
+                _lastResetDate.value = currentServerDate
+                saveCurrentAccountStateToStateList()
+                saveData()
+            }
+        } else if (lastDate != currentServerDate) {
+            restartToTopOfList(currentServerDate)
+        }
+    }
+
+    fun restartToTopOfList(newDate: String = getCurrentServerDate()) {
+        _lastResetDate.value = newDate
+        _activeCharIndex.value = 0
+        _currentBase.value = 0
+        _currentCluster.value = 0
+        _trackedTypeOverride.value = null
+
+        val currentAccounts = _accounts.value
+        if (currentAccounts.isNotEmpty()) {
+            _accounts.value = currentAccounts.map { acc ->
+                acc.copy(activeCharIndex = 0, lastResetDate = newDate)
+            }
+        }
+        saveData()
     }
 
     // --- Daily Auto-Detection Logic ---
@@ -947,7 +1035,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             _weaponPoolInput.value = nextAccount.weaponPoolInput
             _armorPoolInput.value = nextAccount.armorPoolInput
             _sharedPoolInput.value = nextAccount.sharedPoolInput
+            _lastResetDate.value = nextAccount.lastResetDate
             
+            checkAndApplyDailyReset()
             saveData()
         }
     }
@@ -963,7 +1053,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             necroHistory = emptyList(),
             weaponPoolInput = "",
             armorPoolInput = "",
-            sharedPoolInput = ""
+            sharedPoolInput = "",
+            lastResetDate = getCurrentServerDate()
         )
         
         val newList = _accounts.value + newAcc
