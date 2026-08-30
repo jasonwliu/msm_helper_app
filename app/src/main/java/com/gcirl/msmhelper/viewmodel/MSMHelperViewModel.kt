@@ -631,7 +631,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             _necroHistory.value = listOf(action) + _necroHistory.value
         }
 
-        // Reset base and cluster, advance character (keep day override active)
+        // Reset base and cluster, advance character (defaulting back to armor)
         _currentBase.value = 0
         _currentCluster.value = 0
         nextCharacter()
@@ -643,6 +643,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         _activeCharIndex.value = (_activeCharIndex.value + 1) % chars.size
         _currentBase.value = 0
         _currentCluster.value = 0
+        _trackedTypeOverride.value = null
         saveData()
     }
 

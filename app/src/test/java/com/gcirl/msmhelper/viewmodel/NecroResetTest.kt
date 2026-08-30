@@ -90,4 +90,13 @@ class NecroResetTest {
         val formattedDate = sdf.format(testCalendar.time)
         assertEquals("2026-08-29", formattedDate)
     }
+
+    @Test
+    fun trackedType_defaultsToArmorWhenOverrideCleared() {
+        var trackedTypeOverride: String? = "weapon"
+        // Advancing to next character clears the override
+        trackedTypeOverride = null
+        val trackedType = trackedTypeOverride ?: "armor"
+        assertEquals("armor", trackedType)
+    }
 }

@@ -129,46 +129,6 @@ fun DailyTrackerTab(
                     .fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Day Indicator Banner
-                item {
-                    val indicatorBg = if (trackedType == "weapon") WeaponPinkAlpha else ArmorBlueAlpha
-                    val indicatorBorder = if (trackedType == "weapon") WeaponPink else ArmorBlue
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, indicatorBorder),
-                        colors = CardDefaults.cardColors(containerColor = indicatorBg)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = viewModel.getDayLabel(),
-                                fontWeight = FontWeight.Bold,
-                                color = indicatorBorder,
-                                fontSize = 12.sp,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (trackedTypeOverride != null) {
-                                Text(
-                                    text = "Reset to Auto",
-                                    color = indicatorBorder,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier
-                                        .clickable { viewModel.resetTrackedTypeOverride() }
-                                        .padding(4.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
                 // Previous Character Card (Muted queue above)
                 if (prevChar != null) {
                     item {
@@ -544,47 +504,7 @@ fun DailyTrackerTab(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // 1. Day Indicator Banner
-        item {
-            val indicatorBg = if (trackedType == "weapon") WeaponPinkAlpha else ArmorBlueAlpha
-            val indicatorBorder = if (trackedType == "weapon") WeaponPink else ArmorBlue
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, indicatorBorder),
-                colors = CardDefaults.cardColors(containerColor = indicatorBg)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = viewModel.getDayLabel(),
-                        fontWeight = FontWeight.Bold,
-                        color = indicatorBorder,
-                        fontSize = 14.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (trackedTypeOverride != null) {
-                        Text(
-                            text = "Reset to Auto",
-                            color = indicatorBorder,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .clickable { viewModel.resetTrackedTypeOverride() }
-                                .padding(4.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // 2. Previous Character Element (Muted queue above)
+        // Previous Character Element (Muted queue above)
         if (prevChar != null) {
             item {
                 Card(
