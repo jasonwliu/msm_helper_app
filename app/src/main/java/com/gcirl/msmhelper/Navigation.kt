@@ -1,6 +1,6 @@
 package com.gcirl.msmhelper
 
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
@@ -18,7 +18,7 @@ fun MainNavigation() {
     entryProvider =
       entryProvider {
         entry<Main> {
-          MainScreen(modifier = Modifier.safeDrawingPadding())
+          MainScreen(modifier = Modifier.fillMaxSize())
         }
       },
   )

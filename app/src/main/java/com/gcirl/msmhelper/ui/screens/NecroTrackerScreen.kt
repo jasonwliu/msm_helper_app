@@ -929,6 +929,7 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
 
     LazyColumn(
         state = lazyListState,
+        contentPadding = PaddingValues(bottom = 24.dp),
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)

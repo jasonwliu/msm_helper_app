@@ -387,6 +387,7 @@ fun MainScreen(
     ) {
         Scaffold(
             modifier = modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets.systemBars,
             topBar = {
                 TopAppBar(
                     title = {
@@ -464,6 +465,8 @@ fun MainScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding)
+                    .imePadding()
             ) {
                 if (selectedTab in 0..4) {
                     AccountSelectorBar(viewModel = viewModel)
