@@ -63,6 +63,27 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         saveData()
     }
 
+    // App Settings
+    private val _nextCharStoneMode = MutableStateFlow("armor") // "armor", "weapon", "keep"
+    val nextCharStoneMode: StateFlow<String> = _nextCharStoneMode.asStateFlow()
+
+    private val _reorderModeEnabled = MutableStateFlow(false)
+    val reorderModeEnabled: StateFlow<Boolean> = _reorderModeEnabled.asStateFlow()
+
+    fun setNextCharStoneMode(mode: String) {
+        if (mode in listOf("armor", "weapon", "keep")) {
+            _nextCharStoneMode.value = mode
+            sharedPrefs.edit().putString("next_char_stone_mode", mode).apply()
+            saveData()
+        }
+    }
+
+    fun setReorderModeEnabled(enabled: Boolean) {
+        _reorderModeEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("reorder_mode_enabled", enabled).apply()
+        saveData()
+    }
+
     // Persistent calculator pool inputs
     private val _weaponPoolInput = MutableStateFlow("")
     val weaponPoolInput = _weaponPoolInput.asStateFlow()
@@ -186,7 +207,9 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             selectedTab = _selectedTab.value,
             accounts = _accounts.value,
             activeAccountIndex = _activeAccountIndex.value,
-            lastResetDate = _lastResetDate.value
+            lastResetDate = _lastResetDate.value,
+            nextCharStoneMode = _nextCharStoneMode.value,
+            reorderModeEnabled = _reorderModeEnabled.value
         )
         try {
             val jsonStr = jsonParser.encodeToString(state)
@@ -269,6 +292,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                     _sharedPoolInput.value = activeAcc.sharedPoolInput
                     _lastResetDate.value = if (state.lastResetDate.isNotEmpty()) state.lastResetDate else activeAcc.lastResetDate
                 }
+                _nextCharStoneMode.value = state.nextCharStoneMode.ifEmpty {
+                    sharedPrefs.getString("next_char_stone_mode", "armor") ?: "armor"
+                }
+                _reorderModeEnabled.value = state.reorderModeEnabled || sharedPrefs.getBoolean("reorder_mode_enabled", false)
                 checkAndApplyDailyReset()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -291,6 +318,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             _armorPoolInput.value = ""
             _sharedPoolInput.value = ""
             _lastResetDate.value = getCurrentServerDate()
+            _nextCharStoneMode.value = sharedPrefs.getString("next_char_stone_mode", "armor") ?: "armor"
+            _reorderModeEnabled.value = sharedPrefs.getBoolean("reorder_mode_enabled", false)
         }
     }
 
@@ -459,6 +488,8 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 _sharedPoolInput.value = activeAcc.sharedPoolInput
                 _lastResetDate.value = if (state.lastResetDate.isNotEmpty()) state.lastResetDate else activeAcc.lastResetDate
             }
+            _nextCharStoneMode.value = state.nextCharStoneMode
+            _reorderModeEnabled.value = state.reorderModeEnabled
             checkAndApplyDailyReset()
             saveData()
             true
@@ -539,7 +570,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         _activeCharIndex.value = 0
         _currentBase.value = 0
         _currentCluster.value = 0
-        _trackedTypeOverride.value = null
+        when (_nextCharStoneMode.value) {
+            "weapon" -> _trackedTypeOverride.value = "weapon"
+            else -> _trackedTypeOverride.value = null
+        }
 
         val currentAccounts = _accounts.value
         if (currentAccounts.isNotEmpty()) {
@@ -643,7 +677,11 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         _activeCharIndex.value = (_activeCharIndex.value + 1) % chars.size
         _currentBase.value = 0
         _currentCluster.value = 0
-        _trackedTypeOverride.value = null
+        when (_nextCharStoneMode.value) {
+            "weapon" -> _trackedTypeOverride.value = "weapon"
+            "keep" -> { /* Keep whatever stone type is currently selected */ }
+            else -> _trackedTypeOverride.value = null // defaults to "armor"
+        }
         saveData()
     }
 

@@ -103,5 +103,7 @@ data class MSMAppState(
     val selectedTab: Int = 0,
     val accounts: List<Account> = emptyList(),
     val activeAccountIndex: Int = 0,
-    val lastResetDate: String = ""
+    val lastResetDate: String = "",
+    val nextCharStoneMode: String = "armor",
+    val reorderModeEnabled: Boolean = false
 )

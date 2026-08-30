@@ -832,7 +832,7 @@ fun DailyTrackerTab(
 fun OverviewTab(viewModel: MSMHelperViewModel) {
     val characters by viewModel.characters.collectAsState()
     val context = LocalContext.current
-    var isReorderMode by remember { mutableStateOf(false) }
+    val isReorderMode by viewModel.reorderModeEnabled.collectAsState()
 
     val lazyListState = rememberLazyListState()
     var columnTop by remember { mutableStateOf(0f) }
@@ -938,31 +938,49 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
             },
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Toggle Switch for Rearrange Mode
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Rearrange Mode",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                Switch(
-                    checked = isReorderMode,
-                    onCheckedChange = { isReorderMode = it },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = PrimaryPurple,
-                        checkedTrackColor = PrimaryPurple.copy(alpha = 0.5f),
-                        uncheckedThumbColor = TextMuted,
-                        uncheckedTrackColor = DarkBorder
-                    )
-                )
+        // Informative banner when Rearrange Mode is enabled in Settings
+        if (isReorderMode) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0x22C59BFF)),
+                    border = BorderStroke(1.dp, PrimaryPurple.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("↕️", fontSize = 16.sp)
+                            Column {
+                                Text(
+                                    text = "Rearrange Mode Active",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = PrimaryPurple
+                                )
+                                Text(
+                                    text = "Press and hold any card to drag and reorder",
+                                    fontSize = 11.sp,
+                                    color = TextMuted
+                                )
+                            }
+                        }
+                        TextButton(
+                            onClick = { viewModel.setReorderModeEnabled(false) },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("Done", fontWeight = FontWeight.Bold, color = PrimaryPurple, fontSize = 12.sp)
+                        }
+                    }
+                }
             }
         }
 

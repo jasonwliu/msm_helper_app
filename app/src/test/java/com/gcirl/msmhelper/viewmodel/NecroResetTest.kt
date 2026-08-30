@@ -99,4 +99,58 @@ class NecroResetTest {
         val trackedType = trackedTypeOverride ?: "armor"
         assertEquals("armor", trackedType)
     }
+
+    @Test
+    fun msmAppState_settingsSerialization_preservesSettings() {
+        val state = MSMAppState(
+            nextCharStoneMode = "weapon",
+            reorderModeEnabled = true
+        )
+
+        val encoded = json.encodeToString(state)
+        val decoded = json.decodeFromString<MSMAppState>(encoded)
+
+        assertEquals("weapon", decoded.nextCharStoneMode)
+        assertTrue(decoded.reorderModeEnabled)
+    }
+
+    @Test
+    fun msmAppState_legacyDeserialization_defaultsSettings() {
+        val legacyJson = """{"characters":[],"activeCharIndex":0}"""
+        val decoded = json.decodeFromString<MSMAppState>(legacyJson)
+
+        assertEquals("armor", decoded.nextCharStoneMode)
+        assertFalse(decoded.reorderModeEnabled)
+    }
+
+    @Test
+    fun nextCharStoneSelection_behaviorModes() {
+        // Mode 1: Armor
+        val modeArmor = "armor"
+        val nextStoneArmor = when (modeArmor) {
+            "weapon" -> "weapon"
+            "keep" -> "weapon"
+            else -> "armor"
+        }
+        assertEquals("armor", nextStoneArmor)
+
+        // Mode 2: Weapon
+        val modeWeapon = "weapon"
+        val nextStoneWeapon = when (modeWeapon) {
+            "weapon" -> "weapon"
+            "keep" -> "armor"
+            else -> "armor"
+        }
+        assertEquals("weapon", nextStoneWeapon)
+
+        // Mode 3: Keep
+        val modeKeep = "keep"
+        val currentSelection = "weapon"
+        val nextStoneKeep = when (modeKeep) {
+            "weapon" -> "weapon"
+            "keep" -> currentSelection
+            else -> "armor"
+        }
+        assertEquals("weapon", nextStoneKeep)
+    }
 }

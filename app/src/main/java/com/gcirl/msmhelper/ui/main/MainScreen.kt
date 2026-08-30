@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,6 +35,7 @@ import com.gcirl.msmhelper.ui.screens.MastercraftTrackerScreen
 import com.gcirl.msmhelper.ui.screens.MastercraftStatsScreen
 import com.gcirl.msmhelper.ui.screens.BossAccessoryScreen
 import com.gcirl.msmhelper.ui.screens.DamageCalculatorScreen
+import com.gcirl.msmhelper.ui.screens.SettingsScreen
 import com.gcirl.msmhelper.viewmodel.MSMHelperViewModel
 import kotlinx.coroutines.launch
 
@@ -357,6 +359,28 @@ fun MainScreen(
                         ),
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Item 10: Settings
+                    NavigationDrawerItem(
+                        label = { Text("Settings", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        selected = selectedTab == 10,
+                        onClick = {
+                            selectedTab = 10
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Text("⚙️", fontSize = 20.sp) },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color(0x22C59BFF),
+                            selectedIconColor = PrimaryPurple,
+                            selectedTextColor = PrimaryPurple,
+                            unselectedContainerColor = Color.Transparent,
+                            unselectedIconColor = TextMuted,
+                            unselectedTextColor = TextMuted
+                        ),
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
                 }
             }
         }
@@ -377,7 +401,8 @@ fun MainScreen(
                                 6 -> "Mastercraft Stats"
                                 7 -> "Boss Accessory Tracker"
                                 8 -> "Damage Calculator"
-                                else -> "Backup & Restore"
+                                9 -> "Backup & Restore"
+                                else -> "Settings"
                             },
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
@@ -419,6 +444,14 @@ fun MainScreen(
                                 )
                             }
                         }
+
+                        IconButton(onClick = { selectedTab = 10 }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = if (selectedTab == 10) PrimaryPurple else TextMuted
+                            )
+                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = DarkSurface,
@@ -452,6 +485,7 @@ fun MainScreen(
                         7 -> BossAccessoryScreen(viewModel = viewModel)
                         8 -> DamageCalculatorScreen(viewModel = viewModel)
                         9 -> BackupRestoreTab(viewModel = viewModel)
+                        10 -> SettingsScreen(viewModel = viewModel, onNavigateToBackup = { selectedTab = 9 })
                     }
                 }
             }
