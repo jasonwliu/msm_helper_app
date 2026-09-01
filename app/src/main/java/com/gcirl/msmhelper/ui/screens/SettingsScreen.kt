@@ -79,52 +79,58 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // 3 Options: Armor, Weapon, Keep Selection
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            val options = listOf(
-                                Triple("armor", "🛡️ Armor", ArmorBlue),
-                                Triple("weapon", "⚔️ Weapon", WeaponPink),
-                                Triple("keep", "🔄 Keep", PrimaryPurple)
-                            )
+                        // 4 Options: Armor, Weapon, Keep (Global), Per-Character Keep
+                        val row1Options = listOf(
+                            Triple("armor", "🛡️ Armor", ArmorBlue),
+                            Triple("weapon", "⚔️ Weapon", WeaponPink)
+                        )
+                        val row2Options = listOf(
+                            Triple("keep", "🔄 Keep (Global)", PrimaryPurple),
+                            Triple("per_character", "👤 Per-Character", Color(0xFFE5A93C))
+                        )
 
-                            options.forEach { (mode, label, accentColor) ->
-                                val isSelected = nextCharStoneMode == mode
-                                Card(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { viewModel.setNextCharStoneMode(mode) },
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) accentColor.copy(alpha = 0.18f) else DarkSurfaceVariant
-                                    ),
-                                    border = BorderStroke(
-                                        if (isSelected) 1.5.dp else 1.dp,
-                                        if (isSelected) accentColor else DarkBorder
-                                    ),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Column(
+                        listOf(row1Options, row2Options).forEachIndexed { rowIndex, rowList ->
+                            if (rowIndex > 0) Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowList.forEach { (mode, label, accentColor) ->
+                                    val isSelected = nextCharStoneMode == mode
+                                    Card(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 12.dp, horizontal = 6.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                            .weight(1f)
+                                            .clickable { viewModel.setNextCharStoneMode(mode) },
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isSelected) accentColor.copy(alpha = 0.18f) else DarkSurfaceVariant
+                                        ),
+                                        border = BorderStroke(
+                                            if (isSelected) 1.5.dp else 1.dp,
+                                            if (isSelected) accentColor else DarkBorder
+                                        ),
+                                        shape = RoundedCornerShape(8.dp)
                                     ) {
-                                        Text(
-                                            text = label,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 12.sp,
-                                            color = if (isSelected) accentColor else TextMuted
-                                        )
-                                        if (isSelected) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 12.dp, horizontal = 6.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
                                             Text(
-                                                text = "Default",
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = accentColor,
-                                                modifier = Modifier.padding(top = 2.dp)
+                                                text = label,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 12.sp,
+                                                color = if (isSelected) accentColor else TextMuted
                                             )
+                                            if (isSelected) {
+                                                Text(
+                                                    text = "Active",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = accentColor,
+                                                    modifier = Modifier.padding(top = 2.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -134,7 +140,8 @@ fun SettingsScreen(
                         // Explanation of current mode
                         val modeDescription = when (nextCharStoneMode) {
                             "weapon" -> "Automatically resets to Weapon stone when advancing characters."
-                            "keep" -> "Keeps whatever stone type (Armor or Weapon) you last selected."
+                            "keep" -> "Keeps whatever stone type (Armor or Weapon) you last selected on the previous character."
+                            "per_character" -> "Remembers and keeps each character's own individual stone selection (Armor or Weapon)."
                             else -> "Automatically resets to Armor stone when advancing characters (Default)."
                         }
                         Text(

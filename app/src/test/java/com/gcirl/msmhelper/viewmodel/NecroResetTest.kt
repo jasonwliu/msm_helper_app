@@ -152,5 +152,38 @@ class NecroResetTest {
             else -> "armor"
         }
         assertEquals("weapon", nextStoneKeep)
+
+        // Mode 4: Per-Character Keep
+        val chars = listOf(
+            Character("Char1", preferredType = "weapon"),
+            Character("Char2", preferredType = "armor"),
+            Character("Char3", preferredType = null)
+        )
+        val modePerChar = "per_character"
+        fun getTrackedTypeForIndex(index: Int): String {
+            val char = chars[index]
+            return when (modePerChar) {
+                "weapon" -> "weapon"
+                "per_character" -> if (char.preferredType == "weapon") "weapon" else "armor"
+                else -> "armor"
+            }
+        }
+        assertEquals("weapon", getTrackedTypeForIndex(0))
+        assertEquals("armor", getTrackedTypeForIndex(1))
+        assertEquals("armor", getTrackedTypeForIndex(2))
+    }
+
+    @Test
+    fun character_preferredType_serializationCompatibility() {
+        val charWithPref = Character(name = "Hero", weapon = 10, armor = 20, preferredType = "weapon")
+        val encoded = json.encodeToString(charWithPref)
+        val decoded = json.decodeFromString<Character>(encoded)
+
+        assertEquals("weapon", decoded.preferredType)
+
+        // Legacy JSON without preferredType defaults to null
+        val legacyJson = """{"name":"OldHero","weapon":5,"armor":15}"""
+        val legacyDecoded = json.decodeFromString<Character>(legacyJson)
+        assertNull(legacyDecoded.preferredType)
     }
 }

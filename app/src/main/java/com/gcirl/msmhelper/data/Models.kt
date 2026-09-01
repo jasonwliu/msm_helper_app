@@ -6,7 +6,8 @@ import kotlinx.serialization.Serializable
 data class Character(
     val name: String,
     val weapon: Int = 0,
-    val armor: Int = 0
+    val armor: Int = 0,
+    val preferredType: String? = null // "weapon" or "armor" (null defaults to armor)
 )
 
 @Serializable

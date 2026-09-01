@@ -1053,12 +1053,33 @@ fun OverviewTab(viewModel: MSMHelperViewModel) {
                     verticalAlignment = Alignment.Top
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = char.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = char.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            val pref = char.preferredType ?: "armor"
+                            val isWeapon = pref == "weapon"
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isWeapon) WeaponPink.copy(alpha = 0.18f) else ArmorBlue.copy(alpha = 0.18f),
+                                border = BorderStroke(1.dp, if (isWeapon) WeaponPink.copy(alpha = 0.6f) else ArmorBlue.copy(alpha = 0.6f)),
+                                modifier = Modifier.clickable { viewModel.toggleCharacterPreferredType(index) }
+                            ) {
+                                Text(
+                                    text = if (isWeapon) "⚔️ Weapon" else "🛡️ Armor",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isWeapon) WeaponPink else ArmorBlue,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
 
                         // Weapon pieces row

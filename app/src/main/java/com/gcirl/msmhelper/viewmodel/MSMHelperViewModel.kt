@@ -71,10 +71,20 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     val reorderModeEnabled: StateFlow<Boolean> = _reorderModeEnabled.asStateFlow()
 
     fun setNextCharStoneMode(mode: String) {
-        if (mode in listOf("armor", "weapon", "keep")) {
+        if (mode in listOf("armor", "weapon", "keep", "per_character")) {
             _nextCharStoneMode.value = mode
             sharedPrefs.edit().putString("next_char_stone_mode", mode).apply()
+            if (mode == "per_character") {
+                applyTrackedTypeForActiveCharacter()
+            }
             saveData()
+        }
+    }
+
+    private fun applyTrackedTypeForActiveCharacter() {
+        if (_nextCharStoneMode.value == "per_character") {
+            val char = _characters.value.getOrNull(_activeCharIndex.value)
+            _trackedTypeOverride.value = if (char?.preferredType == "weapon") "weapon" else null
         }
     }
 
@@ -297,6 +307,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
                 }
                 _reorderModeEnabled.value = state.reorderModeEnabled || sharedPrefs.getBoolean("reorder_mode_enabled", false)
                 checkAndApplyDailyReset()
+                applyTrackedTypeForActiveCharacter()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -572,6 +583,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         _currentCluster.value = 0
         when (_nextCharStoneMode.value) {
             "weapon" -> _trackedTypeOverride.value = "weapon"
+            "per_character" -> {
+                val firstChar = _characters.value.firstOrNull()
+                _trackedTypeOverride.value = if (firstChar?.preferredType == "weapon") "weapon" else null
+            }
             else -> _trackedTypeOverride.value = null
         }
 
@@ -600,10 +615,33 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun handleTypeClick(type: String) {
-        if (_trackedTypeOverride.value == type) {
-            _trackedTypeOverride.value = null
-        } else {
-            _trackedTypeOverride.value = type
+        val newOverride = if (_trackedTypeOverride.value == type) null else type
+        _trackedTypeOverride.value = newOverride
+
+        if (_nextCharStoneMode.value == "per_character") {
+            val chars = _characters.value.toMutableList()
+            val activeIndex = _activeCharIndex.value
+            if (activeIndex in chars.indices) {
+                chars[activeIndex] = chars[activeIndex].copy(preferredType = newOverride ?: "armor")
+                _characters.value = chars
+            }
+        }
+        saveData()
+    }
+
+    fun toggleCharacterPreferredType(index: Int) {
+        val chars = _characters.value.toMutableList()
+        if (index in chars.indices) {
+            val current = chars[index].preferredType ?: "armor"
+            val newType = if (current == "weapon") "armor" else "weapon"
+            chars[index] = chars[index].copy(preferredType = newType)
+            _characters.value = chars
+
+            // If toggling active character and in per_character mode, apply immediately
+            if (index == _activeCharIndex.value && _nextCharStoneMode.value == "per_character") {
+                _trackedTypeOverride.value = if (newType == "weapon") "weapon" else null
+            }
+            saveData()
         }
     }
 
@@ -680,6 +718,10 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
         when (_nextCharStoneMode.value) {
             "weapon" -> _trackedTypeOverride.value = "weapon"
             "keep" -> { /* Keep whatever stone type is currently selected */ }
+            "per_character" -> {
+                val nextChar = chars.getOrNull(_activeCharIndex.value)
+                _trackedTypeOverride.value = if (nextChar?.preferredType == "weapon") "weapon" else null
+            }
             else -> _trackedTypeOverride.value = null // defaults to "armor"
         }
         saveData()
@@ -1077,6 +1119,7 @@ class MSMHelperViewModel(application: Application) : AndroidViewModel(applicatio
             _lastResetDate.value = nextAccount.lastResetDate
             
             checkAndApplyDailyReset()
+            applyTrackedTypeForActiveCharacter()
             saveData()
         }
     }
